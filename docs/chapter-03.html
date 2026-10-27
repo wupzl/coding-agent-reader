@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="description" content="Agent 帝国：代码审判者。九章小说式 Coding Agent 工程阅读，含本地交互实验与章末练习。"><title>百万行代码迷宫——Agent 如何找到真正的 Bug？ · Agent 帝国</title><script>try{document.documentElement.dataset.theme=localStorage.getItem('coding-agent-theme')||'white';document.documentElement.style.setProperty('--reading-size',Math.max(16,Math.min(26,Number(localStorage.getItem('coding-agent-size'))||18))+'px')}catch(e){}</script><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="shelf-nav.css"><link rel="stylesheet" href="reader.css"><link rel="stylesheet" href="syntax.css"><script src="app.js" defer></script><script src="labs.js" defer></script></head>
+<body data-chapter="3"><a class="skip" href="#main">跳到正文</a><div id="progress" aria-hidden="true"></div><header><a class="brand" href="index.html">Agent 帝国<span>THE CODE TRIBUNAL</span></a><nav class="shelf-nav" aria-label="学习项目导航"><a class="shelf-home" href="/">← 学习书架</a><details class="shelf-switch"><summary>切换项目 ▾</summary><div class="shelf-menu"><a href="/pytorch-apprentice/">PyTorch：炼金术士的学徒</a><a href="/ai-era-reader/">AI 纪元</a><a href="/data-empire-reader/">数据帝国</a><a href="/rag-empire-reader/">RAG 帝国</a><a href="/system-design-reader/">系统设计</a><a href="/online-troubleshooting-reader/">生产环境</a><a href="/coding-agent-reader/" aria-current="page">Agent 帝国</a></div></details></nav><div class="controls"><button id="search-open" aria-label="搜索全书" title="搜索全书（/）">搜索</button><button id="smaller" aria-label="缩小字号">A−</button><button id="larger" aria-label="增大字号">A＋</button><button id="theme" aria-label="切换阅读背景">纯白</button></div></header>
+<div class="reader-layout"><aside><a href="index.html">← 全书导航</a><details class="book-toc"><summary>九章工程旅程</summary><nav aria-label="全书章节"><a href="chapter-01.html"><span>01</span> 一条 URL 引发的代码战争</a><a href="chapter-02.html"><span>02</span> 智能体的大脑——Agent Loop 与工具调用</a><a href="chapter-03.html" aria-current="page"><span>03</span> 百万行代码迷宫——Agent 如何找到真正的 Bug？</a><a href="chapter-04.html"><span>04</span> Bug 审判庭——如何证明一个 Bug 真的存在？</a><a href="chapter-05.html"><span>05</span> 代码外科医生——AI 如何安全地修改百万行代码？</a><a href="chapter-06.html"><span>06</span> 云端战争——一千个 Coding Agent 同时觉醒</a><a href="chapter-07.html"><span>07</span> 安全与失控——当 Agent 获得执行权限</a><a href="chapter-08.html"><span>08</span> 评测法庭——如何证明 Coding Agent 真的变聪明了？</a><a href="chapter-09.html"><span>09</span> 终极面试——从实习项目到真正的工程体系</a></nav></details><p class="eyebrow">本章目录</p><div class="toc">
+<ul>
+<li><a href="#_1">第一幕：一百二十万行代码的迷宫</a></li>
+<li><a href="#_2">第二幕：代码检索的第一把武器——关键词搜索</a></li>
+<li><a href="#ast-agent">第三幕：AST——让 Agent 看懂代码结构</a></li>
+<li><a href="#lsp-agent-ide">第四幕：LSP——让 Agent 拥有 IDE 的眼睛</a></li>
+<li><a href="#bug">第五幕：调用图——Bug 不一定在报错的地方</a></li>
+<li><a href="#code-embedding">第六幕：Code Embedding——当关键词也找不到答案</a></li>
+<li><a href="#code-rag">第七幕：Code RAG——给智能体建立代码记忆</a></li>
+<li><a href="#hybrid-search">第八幕：Hybrid Search——真正实用的组合拳</a></li>
+<li><a href="#context-builder">第九幕：Context Builder——把哪段代码交给大模型？</a></li>
+<li><a href="#_5">第十幕：真正的根因定位——超时为什么导致重复扣款？</a></li>
+<li><a href="#java">第十一幕：Java 工程实现——代码检索工具怎么写？</a></li>
+<li><a href="#_7">第十二幕：如何证明你的代码检索系统确实有效？</a></li>
+<li><a href="#code-rag_1">第十三幕：面试审判——你真的懂 Code RAG 吗？</a></li>
+<li><a href="#_8">尾声：找到代码不等于找到真相</a></li>
+<li><a href="#_9">本章知识总结</a></li>
+</ul>
+</div>
+<a href="reading.html">我的进度与书签 →</a></aside><main id="main" class="chapter-main"><div class="chapter-heading"><p class="eyebrow">CHAPTER 03 / 09 · 约 25 分钟</p><h1>百万行代码迷宫——Agent 如何找到真正的 Bug？</h1><p>关键词 · AST / LSP · Code RAG</p><div class="chapter-tools"><button id="bookmark" type="button" aria-pressed="false">收藏当前位置</button><a href="reading.html">我的阅读 →</a><span id="read-status" role="status"></span></div></div><details class="mobile-toc"><summary>章节与本章目录</summary><nav class="book-links"><a href="chapter-01.html"><span>01</span> 一条 URL 引发的代码战争</a><a href="chapter-02.html"><span>02</span> 智能体的大脑——Agent Loop 与工具调用</a><a href="chapter-03.html" aria-current="page"><span>03</span> 百万行代码迷宫——Agent 如何找到真正的 Bug？</a><a href="chapter-04.html"><span>04</span> Bug 审判庭——如何证明一个 Bug 真的存在？</a><a href="chapter-05.html"><span>05</span> 代码外科医生——AI 如何安全地修改百万行代码？</a><a href="chapter-06.html"><span>06</span> 云端战争——一千个 Coding Agent 同时觉醒</a><a href="chapter-07.html"><span>07</span> 安全与失控——当 Agent 获得执行权限</a><a href="chapter-08.html"><span>08</span> 评测法庭——如何证明 Coding Agent 真的变聪明了？</a><a href="chapter-09.html"><span>09</span> 终极面试——从实习项目到真正的工程体系</a></nav><div class="toc">
+<ul>
+<li><a href="#_1">第一幕：一百二十万行代码的迷宫</a></li>
+<li><a href="#_2">第二幕：代码检索的第一把武器——关键词搜索</a></li>
+<li><a href="#ast-agent">第三幕：AST——让 Agent 看懂代码结构</a></li>
+<li><a href="#lsp-agent-ide">第四幕：LSP——让 Agent 拥有 IDE 的眼睛</a></li>
+<li><a href="#bug">第五幕：调用图——Bug 不一定在报错的地方</a></li>
+<li><a href="#code-embedding">第六幕：Code Embedding——当关键词也找不到答案</a></li>
+<li><a href="#code-rag">第七幕：Code RAG——给智能体建立代码记忆</a></li>
+<li><a href="#hybrid-search">第八幕：Hybrid Search——真正实用的组合拳</a></li>
+<li><a href="#context-builder">第九幕：Context Builder——把哪段代码交给大模型？</a></li>
+<li><a href="#_5">第十幕：真正的根因定位——超时为什么导致重复扣款？</a></li>
+<li><a href="#java">第十一幕：Java 工程实现——代码检索工具怎么写？</a></li>
+<li><a href="#_7">第十二幕：如何证明你的代码检索系统确实有效？</a></li>
+<li><a href="#code-rag_1">第十三幕：面试审判——你真的懂 Code RAG 吗？</a></li>
+<li><a href="#_8">尾声：找到代码不等于找到真相</a></li>
+<li><a href="#_9">本章知识总结</a></li>
+</ul>
+</div>
+</details><details class="editor-note"><summary>阅读提示 · 检索结果还不是根因</summary><p>关键词、AST、LSP、调用图与向量检索提供不同线索。调用关系可能受反射、动态分派和跨服务通信影响；必须结合运行证据验证候选根因。</p></details><article><p>核心技术：Ripgrep · AST · LSP · 调用图 · Code Embedding · Code RAG · 多阶段检索 · Java 工程实践</p>
+<blockquote>
+<p>前情提要：</p>
+<p>第一章，林川见识了 Coding Agent 如何自动验证和修复 Bug。</p>
+<p>第二章，他掌握了 Agent Loop、Function Calling、Tool Registry、上下文管理以及任务状态机。</p>
+<p>但一个新问题出现了。</p>
+<p>就算 Agent 会调用工具，它怎么知道应该调用哪个工具？又如何在百万行陌生代码中找到真正出错的位置？</p>
+</blockquote>
+<p>这一次，陈工给林川准备了一场真正的考验。</p>
+<h2 id="_1">第一幕：一百二十万行代码的迷宫</h2>
+<p>凌晨一点。</p>
+<p>公司研发中心的灯光仍然亮着。</p>
+<p>林川正准备下班，突然收到了陈工发来的一条消息。</p>
+<p>“林川，生产环境出现了一个支付问题，你来看看。”</p>
+<p>消息只有一句话：</p>
+<blockquote>
+<p>用户调用支付接口时，偶尔会收到超时提示，但实际上已经扣款。如果重新发起支付，有时还会再次扣款。</p>
+</blockquote>
+<p>林川盯着屏幕。</p>
+<p>“就这些？”</p>
+<p>“就这些。”</p>
+<p>“没有异常堆栈？”</p>
+<p>“没有。”</p>
+<p>“没有具体代码文件？”</p>
+<p>“没有。”</p>
+<p>“复现步骤呢？”</p>
+<p>“也不稳定。”</p>
+<p>林川皱起眉头。</p>
+<p>他打开 Git 仓库。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>payment-platform/
+├── payment-gateway/
+├── payment-service/
+├── transaction-service/
+├── order-service/
+├── account-service/
+├── refund-service/
+├── notification-service/
+├── common/
+├── infrastructure/
+└── ...
+</code></pre></div></div>
+
+<p>整个仓库包含数千个文件，超过一百万行代码。</p>
+<p>他突然明白了问题的严重性。</p>
+<p>“我们总不能把一百二十万行代码全部发给大模型吧？”</p>
+<p>陈工笑了笑。</p>
+<p>“当然不能。”</p>
+<p>“那 Agent 要怎么查？”</p>
+<p>陈工没有直接回答，而是拿起笔在白板上写下：</p>
+<p>定位 Bug 的过程，本质上是在不断缩小搜索空间。</p>
+<h2 id="_2">第二幕：代码检索的第一把武器——关键词搜索</h2>
+<p>陈工问：</p>
+<p>“假设现在让你作为一名人类工程师去排查支付超时，你第一步会做什么？”</p>
+<p>林川回答：</p>
+<p>“搜索支付接口对应的 Controller。”</p>
+<p>“怎么搜索？”</p>
+<p>“IDE 全局搜索，或者 <code>grep</code>。”</p>
+<p>“很好。Agent 也可以这么做。”</p>
+<p>他在终端输入：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>rg<span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;pay|payment|timeout&quot;</span><span class="w"> </span>.
+</code></pre></div></div>
+
+<p>林川问：</p>
+<p>“为什么用 <code>rg</code>，不用 <code>grep</code>？”</p>
+<p>“<code>rg</code> 是 ripgrep。它是专门面向快速文本搜索设计的工具，通常能够利用并行扫描、文件忽略规则以及高效的正则表达式匹配，在大型代码仓库里获得很好的检索性能。”</p>
+<p>“但速度不是最关键的。”</p>
+<p>“最关键的是，它能让 Agent 在不读取整个仓库的情况下，快速获取第一批候选文件。”</p>
+<p>屏幕上出现了大量结果。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>PaymentController.java:42: public PayResult pay(...)
+PaymentService.java:89: public PayResult executePayment(...)
+PaymentClient.java:57: public PayResponse invoke(...)
+PaymentRetryService.java:113: retryPayment(...)
+PaymentTimeoutException.java:12: class PaymentTimeoutException
+...
+</code></pre></div></div>
+
+<p>林川说道：</p>
+<p>“这样不就找到相关代码了吗？”</p>
+<p>陈工摇头。</p>
+<p>“只是找到了包含关键词的代码。”</p>
+<p>“二者有什么区别？”</p>
+<p>“举个例子。”</p>
+<p>他打开一个文件。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">PaymentMetrics</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">recordTimeout</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Record timeout metric</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>“这里有 timeout，但它可能只是监控代码。”</p>
+<p>又打开另一个文件：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="n">Transaction</span><span class="w"> </span><span class="n">tx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">gateway</span><span class="p">.</span><span class="na">invoke</span><span class="p">(</span><span class="n">tx</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>“这里没有 payment，也没有 timeout，但它可能位于真正出问题的调用链上。”</p>
+<p>林川反应过来。</p>
+<p>“关键词检索有两个问题：可能找到无关内容，也可能漏掉相关内容。”</p>
+<p>“没错。”</p>
+<p>这就是信息检索的两个基本概念。</p>
+<h3 id="precision-recall">Precision 与 Recall</h3>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mi>r</mi><mi>e</mi><mi>c</mi><mi>i</mi><mi>s</mi><mi>i</mi><mi>o</mi><mi>n</mi><mo>=</mo><mfrac><mtext>检索出的相关结果</mtext><mtext>全部检索结果</mtext></mfrac></mrow><annotation encoding="application/x-tex"> Precision=\frac{\text{检索出的相关结果}}{\text{全部检索结果}} </annotation></semantics></math></span></p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>R</mi><mi>e</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>l</mi><mo>=</mo><mfrac><mtext>检索出的相关结果</mtext><mtext>全部实际相关结果</mtext></mfrac></mrow><annotation encoding="application/x-tex"> Recall=\frac{\text{检索出的相关结果}}{\text{全部实际相关结果}} </annotation></semantics></math></span></p>
+<p>假设整个仓库有 20 个与问题真正相关的代码位置。</p>
+<p>Agent 检索出了 10 个位置，其中 6 个相关。</p>
+<p>那么：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mi>r</mi><mi>e</mi><mi>c</mi><mi>i</mi><mi>s</mi><mi>i</mi><mi>o</mi><mi>n</mi><mo>=</mo><mn>6</mn><mi mathvariant="normal">/</mi><mn>10</mn><mo>=</mo><mn>60</mn><mspace linebreak="newline"></mspace></mrow><annotation encoding="application/x-tex"> Precision=6/10=60\\% </annotation></semantics></math></span></p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>R</mi><mi>e</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>l</mi><mo>=</mo><mn>6</mn><mi mathvariant="normal">/</mi><mn>20</mn><mo>=</mo><mn>30</mn><mspace linebreak="newline"></mspace></mrow><annotation encoding="application/x-tex"> Recall=6/20=30\\% </annotation></semantics></math></span></p>
+<p>“我们的目标不只是搜索出几个看起来相关的文件，而是尽可能减少漏掉关键代码的概率，同时控制无关代码的数量。”</p>
+<p>陈工说道。</p>
+<p>“但关键词检索无法理解 Java 程序的真实结构。”</p>
+<p>“所以我们需要第二把武器。”</p>
+<h2 id="ast-agent">第三幕：AST——让 Agent 看懂代码结构</h2>
+<p>陈工打开了 <code>PaymentService.java</code>。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="nd">@Service</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">PaymentService</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">PaymentGateway</span><span class="w"> </span><span class="n">gateway</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">PaymentService</span><span class="p">(</span><span class="n">PaymentGateway</span><span class="w"> </span><span class="n">gateway</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">gateway</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gateway</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">PayResult</span><span class="w"> </span><span class="nf">pay</span><span class="p">(</span><span class="n">PayRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="n">PaymentRecord</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="o">=</span>
+<span class="w">            </span><span class="n">createPaymentRecord</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+
+<span class="w">        </span><span class="n">PayResponse</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span>
+<span class="w">            </span><span class="n">gateway</span><span class="p">.</span><span class="na">charge</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">updateResult</span><span class="p">(</span><span class="n">record</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>林川说道：</p>
+<p>“这就是一个普通 Java 类。”</p>
+<p>陈工问：</p>
+<p>“如果让你写一个程序，找出所有调用 <code>gateway.charge()</code> 的方法，你怎么做？”</p>
+<p>“直接搜索 <code>charge(</code>。”</p>
+<p>“那如果有一百个不同类都定义了 <code>charge()</code> 呢？”</p>
+<p>“就会出现很多误判。”</p>
+<p>“如果一个方法名在注释里出现呢？”</p>
+<p>“也可能匹配。”</p>
+<p>“如果使用了接口、方法重载或继承呢？”</p>
+<p>“单纯文本搜索可能无法识别真正调用的是哪个方法。”</p>
+<p>陈工点头。</p>
+<p>“这就是 AST 的价值。”</p>
+<h3 id="ast">什么是 AST？</h3>
+<p>AST，全称 Abstract Syntax Tree，抽象语法树。</p>
+<p>简单理解，编译器或解析器不只是把代码看成字符串，还会识别代码里的结构关系。</p>
+<p>例如：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>int result = a + b * 2;
+</code></pre></div></div>
+
+<p>它不是一段没有意义的文本。</p>
+<p>而是一棵树。</p>
+<p>抽象语法树示意</p>
+<p>简化示意：真实 AST 会保留更多表达式与标识符节点，且乘法子树位于加法右侧。</p>
+<p>陈工继续说道：</p>
+<p>“对于 Java，一个类可以解析为类声明、字段声明、构造方法、方法声明、方法调用、条件表达式等结构。”</p>
+<p>这样 Agent 就能完成更精确的查询：</p>
+<p>“列出 <code>PaymentService</code> 中所有方法。”</p>
+<p>“找出调用 <code>PaymentGateway.charge()</code> 的位置。”</p>
+<p>“找出捕获 <code>TimeoutException</code> 的代码。”</p>
+<p>“找出包含重试逻辑的方法。”</p>
+<h3 id="java-ast">Java 中怎么实现 AST 分析？</h3>
+<p>陈工打开了 JavaParser。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>CompilationUnit cu =
+    StaticJavaParser.parse(
+        new File(&quot;PaymentService.java&quot;)
+    );
+
+cu.findAll(MethodDeclaration.class)
+    .forEach(method -&gt; {
+        System.out.println(
+            method.getNameAsString()
+        );
+    });
+</code></pre></div></div>
+
+<p>输出：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>pay
+createPaymentRecord
+updateResult
+</code></pre></div></div>
+
+<p>然后查找方法调用：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>cu.findAll(MethodCallExpr.class)
+    .forEach(call -&gt; {
+        System.out.println(
+            call.getNameAsString()
+        );
+    });
+</code></pre></div></div>
+
+<p>林川发现：</p>
+<p>“原来我们可以先通过程序提取代码结构，再把相关结构交给模型。”</p>
+<p>“没错。”</p>
+<p>“而且这通常比直接让模型阅读全部源码更节约上下文。”</p>
+<p>不过陈工又提出了一个问题：</p>
+<p>“AST 能保证知道 <code>gateway.charge()</code> 调用的是哪个方法实现吗？”</p>
+<p>林川想了想。</p>
+<p>“不一定，因为这里的 <code>gateway</code> 可能是接口。”</p>
+<p>“正确。”</p>
+<p>AST 主要描述语法结构；跨文件的精确符号解析，还需要语义分析、类型信息和符号解析能力。</p>
+<p>“这就引出了第三把武器。”</p>
+<h2 id="lsp-agent-ide">第四幕：LSP——让 Agent 拥有 IDE 的眼睛</h2>
+<p>陈工问：</p>
+<p>“你平时用 IntelliJ IDEA 时，按住 Ctrl 点击一个方法，IDE 为什么能跳转到它的定义？”</p>
+<p>“因为 IDE 建立了代码索引？”</p>
+<p>“对。它不仅理解文本，还分析了项目中的类型与符号关系。”</p>
+<p>“LSP 就是一种让编辑器或其他客户端与语言服务器交换语言智能能力的协议。”</p>
+<p>LSP，全称 Language Server Protocol。</p>
+<p>它支持的常见能力包括：</p>
+<ul>
+<li>Definition：跳转到定义。</li>
+<li>References：查找引用。</li>
+<li>Hover：查看类型与文档信息。</li>
+<li>Rename：符号重命名。</li>
+<li>Diagnostics：错误与警告诊断。</li>
+<li>Document Symbol：提取文档符号结构。</li>
+</ul>
+<p>林川突然想到了什么。</p>
+<p>“那 Coding Agent 不就可以像开发者一样使用 IDE 的部分能力了吗？”</p>
+<p>“是的，前提是项目语言服务器正确配置，相关能力确实可用。”</p>
+<p>陈工举了个例子。</p>
+<p>Agent 已经找到：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>PayResponse response = gateway.charge(request);
+</code></pre></div></div>
+
+<p>但它不知道调用的真正实现。</p>
+<p>如果只搜索 <code>charge</code>，可能出现几十个结果。</p>
+<p>而通过符号解析，它可以逐步追踪到：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>PaymentGateway.charge()
+        ↓
+RemotePaymentGateway.charge()
+        ↓
+PaymentHttpClient.execute()
+        ↓
+ThirdPartyPaymentClient.request()
+</code></pre></div></div>
+
+<p>“注意，”陈工说道，“接口调用在运行时可能存在多个实现。静态语言服务可能列出候选实现，却未必能在所有场景下确定实际运行目标。”</p>
+<p>“反射、动态代理、Spring Bean 注入以及条件配置，都可能影响结果。”</p>
+<p>林川点头。</p>
+<p>“所以 AST、LSP 和调用图互相补充，而不是互相替代。”</p>
+<h3 id="_3">三种技术的区别</h3>
+<table>
+<thead>
+<tr>
+<th>技术</th>
+<th>核心能力</th>
+<th>局限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ripgrep</td>
+<td>快速文本搜索</td>
+<td>不理解真实符号关系</td>
+</tr>
+<tr>
+<td>AST</td>
+<td>理解语法结构</td>
+<td>不天然具备完整跨文件语义</td>
+</tr>
+<tr>
+<td>LSP</td>
+<td>类型、定义、引用等语言智能</td>
+<td>依赖语言服务器及项目配置</td>
+</tr>
+</tbody>
+</table>
+<p>“那么，真正进行 Bug 定位时，这三者应该怎么配合？”</p>
+<p>陈工说：</p>
+<p>“先用便宜的办法缩小范围，再用精确的办法深入调查。”</p>
+<h2 id="bug">第五幕：调用图——Bug 不一定在报错的地方</h2>
+<p>凌晨两点。</p>
+<p>Agent 找到了支付接口入口：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="nd">@PostMapping</span><span class="p">(</span><span class="s">&quot;/pay&quot;</span><span class="p">)</span>
+<span class="kd">public</span><span class="w"> </span><span class="n">PayResult</span><span class="w"> </span><span class="nf">pay</span><span class="p">(</span><span class="nd">@RequestBody</span><span class="w"> </span><span class="n">PayRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">paymentService</span><span class="p">.</span><span class="na">pay</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>看起来没有问题。</p>
+<p>它继续追踪。</p>
+<p>支付调用链（简化）</p>
+<p>PaymentController.pay()</p>
+<p>入口</p>
+<p>接收 HTTP 支付请求</p>
+<p>PaymentService.pay()</p>
+<p>业务</p>
+<p>创建支付记录、处理业务状态</p>
+<p>PaymentGateway.charge()</p>
+<p>接口</p>
+<p>调用支付网关接口</p>
+<p>RemotePaymentGateway.charge()</p>
+<p>实现</p>
+<p>具体远程调用实现</p>
+<p>PaymentHttpClient.execute()</p>
+<p>重点</p>
+<p>HTTP 请求、超时与重试逻辑</p>
+<p>陈工说：</p>
+<p>“用户看到的是 Controller 返回超时，但根因可能发生在最底层的 HTTP Client。”</p>
+<p>“比如支付请求已被第三方处理，但我们的服务在收到响应前超时了。”</p>
+<p>Agent 继续打开底层实现。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="n">PayResponse</span><span class="w"> </span><span class="nf">charge</span><span class="p">(</span><span class="n">PayRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">paymentClient</span><span class="p">.</span><span class="na">execute</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">SocketTimeoutException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">paymentClient</span><span class="p">.</span><span class="na">execute</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>林川眼神一变。</p>
+<p>“这里超时之后直接重试了！”</p>
+<p>“是的。”</p>
+<p>“如果第一次支付其实已经成功，只是响应丢了，那么第二次请求可能再次扣款。”</p>
+<p>陈工点头。</p>
+<p>“现在你找到了一个合理的根因假设。”</p>
+<p>“但要证明它是实际根因，还需要检查支付请求标识、支付服务幂等契约、事务记录以及调用日志。”</p>
+<p>“甚至还要确认 HTTP Client 自身有没有配置自动重试，避免出现双重重试。”</p>
+<p>林川开始理解调用图的价值。</p>
+<p>用户感知到问题的位置，往往只是异常传播到的地方，不一定是真正产生错误的位置。</p>
+<h2 id="code-embedding">第六幕：Code Embedding——当关键词也找不到答案</h2>
+<p>第二天。</p>
+<p>陈工又给了林川一个任务。</p>
+<p>用户描述：</p>
+<blockquote>
+<p>用户取消订单后，优惠券没有返还。</p>
+</blockquote>
+<p>Agent 尝试搜索：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>rg<span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;coupon refund&quot;</span><span class="w"> </span>.
+</code></pre></div></div>
+
+<p>几乎找不到结果。</p>
+<p>林川有些疑惑。</p>
+<p>“明明是优惠券返还问题，为什么搜索不到？”</p>
+<p>陈工打开源码。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">compensateBenefit</span><span class="p">(</span><span class="n">Order</span><span class="w"> </span><span class="n">order</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">benefitManager</span><span class="p">.</span><span class="na">restore</span><span class="p">(</span>
+<span class="w">        </span><span class="n">order</span><span class="p">.</span><span class="na">getBenefitSnapshot</span><span class="p">()</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>“看到了吗？代码里面不一定出现 coupon，也不一定出现 refund。”</p>
+<p>“业务人员用的是‘优惠券返还’，开发者可能用的是 <code>compensateBenefit</code>。”</p>
+<p>“这就出现了自然语言和代码命名之间的语义鸿沟。”</p>
+<p>林川问：</p>
+<p>“所以要用 Embedding？”</p>
+<p>“对，但要注意它的适用边界。”</p>
+<h3 id="code-embedding_1">Code Embedding 的原理</h3>
+<p>Embedding 模型可以将自然语言或代码转换为向量。</p>
+<p>例如：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Query:
+&quot;用户取消订单后优惠券没有返还&quot;
+
+Code:
+&quot;compensateBenefit(Order order)&quot;
+</code></pre></div></div>
+
+<p>经过适当训练的代码检索模型后，两者可能在向量空间中比较接近。</p>
+<p>语义代码检索的基本过程</p>
+<p>“取消订单后，优惠券没有恢复”</p>
+<p>Embedding Model</p>
+<p>Query Vector</p>
+<p>[0.12, -0.45, 0.81, ...]</p>
+<p>向量相似度检索</p>
+<p>compensateBenefit()</p>
+<p>与用户描述具有潜在语义关联</p>
+<p>常见的向量相似度计算方式是余弦相似度：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">cos</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>A</mi><mo separator="true">,</mo><mi>B</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mi>A</mi><mo>⋅</mo><mi>B</mi></mrow><mrow><mspace linebreak="newline"></mspace><mi mathvariant="normal">∣</mi><mi>A</mi><mspace linebreak="newline"></mspace><mi mathvariant="normal">∣</mi><mspace linebreak="newline"></mspace><mi mathvariant="normal">∣</mi><mi>B</mi><mspace linebreak="newline"></mspace><mi mathvariant="normal">∣</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex"> \operatorname{cos}(A,B)= \frac{A\cdot B}{\\|A\\|\\|B\\|} </annotation></semantics></math></span></p>
+<p>林川说道：</p>
+<p>“所以向量相似度越高，代码越有可能相关。”</p>
+<p>“通常可以这么理解，但要非常小心。”</p>
+<p>陈工强调：</p>
+<p>“语义相似度不等于代码调用关系，也不等于因果关系。”</p>
+<p>例如，两个方法可能都与支付有关：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>validatePayment()
+refundPayment()
+</code></pre></div></div>
+
+<p>它们语义相关，但实现的是不同操作。</p>
+<p>所以 Code Embedding 更适合发现候选代码，而不是直接证明根因。</p>
+<h2 id="code-rag">第七幕：Code RAG——给智能体建立代码记忆</h2>
+<p>林川问：</p>
+<p>“如果每次用户提交任务，都重新搜索整个仓库，效率不是很低吗？”</p>
+<p>陈工回答：</p>
+<p>“对于反复分析的仓库，可以建立代码索引。”</p>
+<p>“这与 RAG 有相似之处。”</p>
+<p>但传统文档 RAG 和代码 RAG 存在明显区别。</p>
+<p>普通文档主要依赖自然语言段落。</p>
+<p>代码则具有严格的结构关系，例如：</p>
+<p>类、方法、参数、返回类型、接口实现、依赖注入、调用关系和模块边界。</p>
+<p>因此，Code RAG 不能只做固定长度的字符串切片。</p>
+<h3 id="_4">如何进行代码分块？</h3>
+<p>陈工展示了两种方法。</p>
+<p>第一种，简单按 Token 数量切分：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Chunk 1: Tokens 0–499
+Chunk 2: Tokens 400–899
+Chunk 3: Tokens 800–1299
+</code></pre></div></div>
+
+<p>这实现简单，但是可能把方法从中间切开。</p>
+<p>第二种，按代码结构切分：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>PaymentService.java
+  ├── pay()
+  ├── validateRequest()
+  ├── createPaymentRecord()
+  └── updatePaymentStatus()
+
+PaymentGateway.java
+  └── charge()
+
+PaymentRetryService.java
+  ├── shouldRetry()
+  └── executeRetry()
+</code></pre></div></div>
+
+<p>“对 Coding Agent 来说，通常应优先保留方法、类和所属文件路径等结构信息。”</p>
+<p>“例如下面这样的索引记录。”</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;repository&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;payment-platform&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;commit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a1b2c3d&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;payment-service/src/main/java/PaymentService.java&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;class&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PaymentService&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pay&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;signature&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PayResult pay(PayRequest request)&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;startLine&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">82</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;endLine&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">126</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;创建支付记录并调用支付网关&quot;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>还需要根据模型支持的上下文长度，对超长方法或超大类进一步切分，并保留父子关系。</p>
+<p>“这样检索出一段代码后，我们还知道它属于哪个类、哪个文件和哪个仓库版本。”</p>
+<p>林川突然意识到：</p>
+<p>“仓库版本也很重要。如果代码变了，原来的索引可能就过期了。”</p>
+<p>“正确。”</p>
+<p>“所以代码检索系统最好把索引和 Git Commit 关联起来，采用增量更新，而不是默认索引永远有效。”</p>
+<h2 id="hybrid-search">第八幕：Hybrid Search——真正实用的组合拳</h2>
+<p>陈工问：</p>
+<p>“假设我们同时拥有关键词检索、AST、LSP 和向量检索，你觉得应该只选最先进的一种吗？”</p>
+<p>林川摇头。</p>
+<p>“应该组合。”</p>
+<p>“正是如此。”</p>
+<p>很多实际系统会采用多阶段检索。</p>
+<p>Coding Agent 多阶段代码检索架构</p>
+<p>用户 Bug 描述</p>
+<p>支付超时，但实际已扣款</p>
+<p>Query Understanding</p>
+<p>提取业务实体、错误现象、技术关键词与可能模块</p>
+<p>Lexical Retrieval</p>
+<p>Ripgrep / BM25</p>
+<p>Semantic Retrieval</p>
+<p>Code Embedding</p>
+<p>Candidate Fusion</p>
+<p>合并候选、去重、重排序</p>
+<p>Structural Expansion</p>
+<p>AST / LSP / 调用图补充上下游依赖</p>
+<p>Context Builder</p>
+<p>按 Token 预算挑选高价值代码和证据</p>
+<p>LLM Root Cause Analysis</p>
+<p>陈工介绍了一种常见的融合算法：RRF，Reciprocal Rank Fusion。</p>
+<p>它不要求关键词检索和向量检索的原始分数具有相同尺度，而是依据排名进行融合。</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>R</mi><mi>R</mi><mi>F</mi><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo>∑</mo><mrow><mi>r</mi><mo>∈</mo><mi>R</mi></mrow></munder><mfrac><mn>1</mn><mrow><mi>k</mi><mo>+</mo><msub><mrow><mi mathvariant="normal">rank</mi><mo>⁡</mo></mrow><mi>r</mi></msub><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex"> RRF(d)=\sum_{r \in R}\frac{1}{k+\operatorname{rank}_r(d)} </annotation></semantics></math></span></p>
+<p>其中：</p>
+<ul>
+<li><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math></span>：某个候选代码片段。</li>
+<li><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi></mrow><annotation encoding="application/x-tex">R</annotation></semantics></math></span>：不同检索器产生的排名列表。</li>
+<li><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math></span>：平滑参数，常见示例值为 60。</li>
+<li><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">rank</mi><mo>⁡</mo></mrow><mi>r</mi></msub><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{rank}_r(d)</annotation></semantics></math></span>：候选在某个检索器中的名次。</li>
+</ul>
+<p>假设一个方法在关键词检索中排名第 2，在向量检索中排名第 3。</p>
+<p>那么，当 <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>60</mn></mrow><annotation encoding="application/x-tex">k=60</annotation></semantics></math></span> 时：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>R</mi><mi>R</mi><mi>F</mi><mo>=</mo><mfrac><mn>1</mn><mn>62</mn></mfrac><mo>+</mo><mfrac><mn>1</mn><mn>63</mn></mfrac><mo>≈</mo><mn>0.0320</mn></mrow><annotation encoding="application/x-tex"> RRF=\frac{1}{62}+\frac{1}{63}\approx0.0320 </annotation></semantics></math></span></p>
+<p>“RRF 是融合候选的一种方法，但不是最终的正确性判定。”</p>
+<p>陈工强调：</p>
+<p>“真正的根因定位还需要代码结构、运行证据与测试结果。”</p>
+<h2 id="context-builder">第九幕：Context Builder——把哪段代码交给大模型？</h2>
+<p>下午。</p>
+<p>Agent 已经找到 120 个候选代码片段。</p>
+<p>林川开心地说道：</p>
+<p>“现在把这 120 个片段全部交给模型分析。”</p>
+<p>陈工问：</p>
+<p>“如果总共需要 180,000 Tokens，但你只准备给代码上下文分配 30,000 Tokens 呢？”</p>
+<p>林川愣住了。</p>
+<p>“那只能选一部分。”</p>
+<p>“怎么选？”</p>
+<p>“按相关性分数排序。”</p>
+<p>“如果最相关的方法需要依赖另一个排名很低的接口实现呢？”</p>
+<p>林川沉默了。</p>
+<p>陈工说道：</p>
+<p>“这就是 Context Builder 的困难所在。代码上下文选择不能只看单个片段的相关性。”</p>
+<p>他提出了四个维度：</p>
+<ol>
+<li>语义相关性：与 Bug 描述有多接近？</li>
+<li>结构重要性：是否处于关键调用链或依赖链上？</li>
+<li>证据价值：是否包含异常处理、重试、事务、状态变化等重要逻辑？</li>
+<li>上下文成本：引入这个片段会占用多少 Token？</li>
+</ol>
+<p>可以用一个简化的目标来理解：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>max</mi><mo>⁡</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>v</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex"> \max \sum_i v_i x_i </annotation></semantics></math></span></p>
+<p>满足：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>t</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub><mo>≤</mo><mi>B</mi></mrow><annotation encoding="application/x-tex"> \sum_i t_i x_i \leq B </annotation></semantics></math></span></p>
+<p>其中 <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>v</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">v_i</annotation></semantics></math></span> 表示候选片段的估计价值，<span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>t</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">t_i</annotation></semantics></math></span> 表示 Token 成本，<span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math></span> 是上下文预算。</p>
+<p>但在真实工程中，代码片段之间存在依赖关系，并不符合完全独立的背包问题假设。</p>
+<p>因此更实用的做法是：</p>
+<p>先选高相关种子代码，再补齐必要的调用链、接口定义、配置和测试；对于体积过大的文件，只保留相关方法与必要上下文。</p>
+<p>“而且，”陈工说，“给模型的代码必须明确路径和行号。”</p>
+<p>例如：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>FILE: PaymentRetryService.java
+LINES: 108-143
+
+METHOD:
+retryPayment(PayRequest request)
+
+RELATED SYMBOLS:
+PaymentGateway.charge
+PaymentRecord.status
+
+OBSERVATION:
+SocketTimeoutException triggers immediate retry.
+</code></pre></div></div>
+
+<p>“这样模型生成分析时，才能更容易引用实际证据，而不是凭空描述仓库结构。”</p>
+<h2 id="_5">第十幕：真正的根因定位——超时为什么导致重复扣款？</h2>
+<p>夜深了。</p>
+<p>Agent 最终筛选出四个关键文件：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>PaymentController.java
+PaymentService.java
+PaymentRetryService.java
+PaymentHttpClient.java
+</code></pre></div></div>
+
+<p>陈工要求林川从业务和技术两个角度分析。</p>
+<p>“第一，你认为支付超时意味着什么？”</p>
+<p>林川回答：</p>
+<p>“客户端在规定时间内没有获得结果。”</p>
+<p>“那是否意味着支付一定失败？”</p>
+<p>“不意味着。”</p>
+<p>“这就是问题的核心。”</p>
+<p>陈工画出了一个时序图。</p>
+<p>支付成功但响应超时的典型场景</p>
+<p>示意场景：网络超时意味着响应结果未知，而不等于远端操作未执行。</p>
+<p>林川恍然大悟。</p>
+<p>“真正的问题不是超时本身，而是把超时当成了支付失败，并且在结果未知时执行了不安全的重试。”</p>
+<p>陈工点头。</p>
+<p>“非常接近。”</p>
+<p>“不过还是要区分两种情况。”</p>
+<p>如果两次支付请求携带相同且有效的幂等键，并且支付服务端正确实现了幂等，重试未必导致重复扣款。</p>
+<p>如果每次重试都生成新的支付标识，或者服务端根本没有幂等约束，就存在重复扣款风险。</p>
+<p>因此，Agent 还需要调查：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>第一次请求：
+  paymentId = ?
+
+第二次重试：
+  paymentId = ?
+
+两个请求是否共享同一个幂等键？
+
+支付网关是否支持查询交易状态？
+
+本地支付记录的状态机如何设计？
+
+网络异常时系统如何处理 UNKNOWN 状态？
+</code></pre></div></div>
+
+<p>陈工说道：</p>
+<p>“这才是优秀的代码分析。”</p>
+<p>“不是看到 catch 里面有 retry 就直接说它是 Bug，而是理解重试发生在什么业务语义下。”</p>
+<h3 id="_6">正确修复方向是什么？</h3>
+<p>对于支付类操作，通常需要结合具体网关契约设计：</p>
+<ul>
+<li>保持同一业务操作的稳定幂等键。</li>
+<li>在本地维护支付状态机。</li>
+<li>对超时结果标记为 <code>UNKNOWN</code> 或类似待确认状态，而不是直接视为失败。</li>
+<li>优先利用支付渠道提供的交易查询或对账机制确认最终结果。</li>
+<li>仅在满足幂等性、重试策略和渠道契约的情况下执行重试。</li>
+</ul>
+<p>例如：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="n">PaymentResult</span><span class="w"> </span><span class="nf">pay</span><span class="p">(</span><span class="n">PaymentRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">paymentId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">request</span><span class="p">.</span><span class="na">getPaymentId</span><span class="p">();</span>
+
+<span class="w">    </span><span class="n">PaymentRecord</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="o">=</span>
+<span class="w">        </span><span class="n">paymentRepository</span><span class="p">.</span><span class="na">findOrCreate</span><span class="p">(</span><span class="n">paymentId</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">record</span><span class="p">.</span><span class="na">isSuccess</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">PaymentResult</span><span class="p">.</span><span class="na">success</span><span class="p">(</span><span class="n">record</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">record</span><span class="p">.</span><span class="na">isProcessingOrUnknown</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">PaymentResult</span><span class="p">.</span><span class="na">pending</span><span class="p">(</span><span class="n">record</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">paymentExecutor</span><span class="p">.</span><span class="na">execute</span><span class="p">(</span>
+<span class="w">        </span><span class="n">paymentId</span><span class="p">,</span>
+<span class="w">        </span><span class="n">request</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>陈工指出：</p>
+<p>“这里只是表达业务意图的伪代码，不是完整可并发安全实现。”</p>
+<p>“真实系统还要有数据库唯一键、条件更新或事务控制，避免多个请求同时通过检查。”</p>
+<p>“你不能仅凭 <code>findOrCreate()</code> 这个名字，就认为幂等问题已经解决。”</p>
+<h2 id="java">第十一幕：Java 工程实现——代码检索工具怎么写？</h2>
+<p>第二周周一。</p>
+<p>陈工终于下达了工程任务。</p>
+<p>“林川，现在你来写一个 <code>search_code</code> 工具。让我们的 Agent 可以在隔离工作区内搜索 Java 代码。”</p>
+<p>林川提出了设计：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">CodeSearchRequest</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">query</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">maxResults</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="p">}</span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">CodeSearchHit</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">filePath</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">lineNumber</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">content</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>然后实现工具服务。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="nd">@Service</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CodeSearchService</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">List</span><span class="o">&lt;</span><span class="n">CodeSearchHit</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">search</span><span class="p">(</span>
+<span class="w">            </span><span class="n">Path</span><span class="w"> </span><span class="n">workspace</span><span class="p">,</span>
+<span class="w">            </span><span class="n">CodeSearchRequest</span><span class="w"> </span><span class="n">request</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">limit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Math</span><span class="p">.</span><span class="na">max</span><span class="p">(</span>
+<span class="w">            </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="n">Math</span><span class="p">.</span><span class="na">min</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="na">maxResults</span><span class="p">(),</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span>
+<span class="w">        </span><span class="p">);</span>
+
+<span class="w">        </span><span class="n">ProcessBuilder</span><span class="w"> </span><span class="n">builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ProcessBuilder</span><span class="p">(</span>
+<span class="w">            </span><span class="s">&quot;rg&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="s">&quot;--json&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="s">&quot;--fixed-strings&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="s">&quot;--line-number&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="s">&quot;--&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="n">request</span><span class="p">.</span><span class="na">query</span><span class="p">(),</span>
+<span class="w">            </span><span class="s">&quot;.&quot;</span>
+<span class="w">        </span><span class="p">);</span>
+
+<span class="w">        </span><span class="n">builder</span><span class="p">.</span><span class="na">directory</span><span class="p">(</span><span class="n">workspace</span><span class="p">.</span><span class="na">toFile</span><span class="p">());</span>
+
+<span class="w">        </span><span class="n">Process</span><span class="w"> </span><span class="n">process</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="na">start</span><span class="p">();</span>
+
+<span class="w">        </span><span class="c1">// 示例中省略了 JSON 行解析。</span>
+<span class="w">        </span><span class="c1">// 生产环境需要：</span>
+<span class="w">        </span><span class="c1">// 1. 读取并限制 stdout/stderr</span>
+<span class="w">        </span><span class="c1">// 2. 设置执行超时并终止进程树</span>
+<span class="w">        </span><span class="c1">// 3. 解析 rg --json 输出</span>
+<span class="w">        </span><span class="c1">// 4. 处理 0/1/2 等退出码</span>
+<span class="w">        </span><span class="c1">// 5. 校验工作区与资源权限</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">parseSearchResults</span><span class="p">(</span><span class="n">process</span><span class="p">,</span><span class="w"> </span><span class="n">limit</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>林川问：</p>
+<p>“为什么不使用 <code>bash -c</code> 拼接命令？”</p>
+<p>陈工回答：</p>
+<p>“因为用户描述和模型生成的参数都可能包含特殊字符。直接拼接 Shell 字符串容易引入命令注入风险。”</p>
+<p>“使用 <code>ProcessBuilder</code> 传递独立参数，可以降低这类风险，但并不代表完全安全。”</p>
+<p>“例如，需要限制文件访问范围、进程资源、输出大小和执行时间。”</p>
+<p>接着，陈工又让他设计一个结构化代码搜索接口。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">interface</span> <span class="nc">CodeIntelligenceService</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">CodeSymbol</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">findSymbols</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">CodeReference</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">findReferences</span><span class="p">(</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">symbolId</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">CodeSymbol</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">findImplementations</span><span class="p">(</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">interfaceSymbolId</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">CallEdge</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">findCallers</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">symbolId</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">CallEdge</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">findCallees</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">symbolId</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>这相当于为 Agent 提供一套更接近 IDE 的代码导航能力。</p>
+<p>但 <code>findCallers()</code>、<code>findCallees()</code> 并不是解析 AST 就能完整实现的，还需要跨文件符号解析或专门的代码分析索引。</p>
+<p>“这样一来，”林川说道，“Agent 可以先用 <code>search_code</code> 找候选，再调用结构化工具深入分析。”</p>
+<p>“没错。”</p>
+<h2 id="_7">第十二幕：如何证明你的代码检索系统确实有效？</h2>
+<p>下午。</p>
+<p>林川向陈工展示了新系统。</p>
+<p>“我们现在能搜索代码、分析 AST，也能使用 Embedding 进行语义检索了。”</p>
+<p>陈工问：</p>
+<p>“效果提升了多少？”</p>
+<p>林川一愣。</p>
+<p>“感觉明显更好了。”</p>
+<p>“感觉不算证据。”</p>
+<p>陈工拿出了一批历史 Bug。</p>
+<p>每个 Bug 都已经人工确认过根因，并标注了关键文件和方法。</p>
+<p>“我们可以构建一套代码定位评测集。”</p>
+<p>例如：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;bugId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BUG-001&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;支付超时后重复扣款&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;relevantFiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;PaymentRetryService.java&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;PaymentHttpClient.java&quot;</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;relevantMethods&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;retryPayment&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;execute&quot;</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>然后比较不同方案。</p>
+<table>
+<thead>
+<tr>
+<th>检索方案</th>
+<th>关注指标</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>仅 Ripgrep</td>
+<td>Recall\@K、检索耗时</td>
+</tr>
+<tr>
+<td>Ripgrep + AST</td>
+<td>方法级定位率、结构关系正确性</td>
+</tr>
+<tr>
+<td>Ripgrep + Embedding</td>
+<td>语义类 Bug 的 Recall\@K</td>
+</tr>
+<tr>
+<td>Hybrid Search</td>
+<td>Recall\@K、MRR、nDCG</td>
+</tr>
+<tr>
+<td>Hybrid + Call Graph</td>
+<td>根因文件覆盖率、额外 Token 成本</td>
+</tr>
+</tbody>
+</table>
+<p>“不要直接假设 Hybrid Search 一定胜过所有方案。”陈工说道。</p>
+<p>“应该在固定数据集和相同预算下进行对照实验。”</p>
+<p>对于整个 Coding Agent，还可以继续观察：</p>
+<ul>
+<li>File Localization Accuracy：真正相关文件是否被找到。</li>
+<li>Method Localization Accuracy：根因相关方法是否进入候选集合。</li>
+<li>Root Cause Accuracy：最终根因解释是否符合证据。</li>
+<li>Patch Success Rate：补丁通过验证的比例。</li>
+<li>Tokens per Task：每个任务消耗多少 Token。</li>
+<li>Task Latency：从提交到完成的耗时。</li>
+</ul>
+<p>尤其要注意：</p>
+<p>检索准确率提升，不一定等于最终修复成功率提升。</p>
+<p>因为 Agent 可能找对了文件，却没有正确理解业务逻辑；也可能理解了根因，却写出了错误的补丁。</p>
+<p>因此最好同时测量检索阶段指标和端到端修复结果。</p>
+<h2 id="code-rag_1">第十三幕：面试审判——你真的懂 Code RAG 吗？</h2>
+<p>傍晚。</p>
+<p>陈工开始了一轮模拟面试。</p>
+<p>六道关键面试追问</p>
+<p>全部展开</p>
+<p>1为什么 Coding Agent 不能只使用向量检索？</p>
+<p>向量检索擅长语义相似性，却不能保证符号解析、类型关系和真实调用链准确。代码理解还依赖词法检索、AST、语言服务、调用图及运行证据。</p>
+<p>2AST 和 LSP 的区别是什么？</p>
+<p>3如果 Bug 描述完全没有代码中的关键词，怎么办？</p>
+<p>4如何处理超大 Java 项目？</p>
+<p>5Agent 找到相关 Controller 就代表定位成功了吗？</p>
+<p>6如何证明新增 Code RAG 带来了提升？</p>
+<p>陈工放下笔。</p>
+<p>“如果面试官问你：为什么不用 Embedding 搜索全部代码？”</p>
+<p>“你应该能够解释：向量检索只是候选召回的一种方式，代码分析还需要准确的语法与语义关系。”</p>
+<p>“如果面试官问：你们是不是用了 Code RAG？”</p>
+<p>“你应该先描述真实实现。如果只使用了 <code>grep</code> 或模型的文件搜索工具，就不要把它说成一套完整的向量检索平台。”</p>
+<p>“工程经验的价值，不在于把所有技术名词都塞进项目，而在于你真正掌握了哪些设计与取舍。”</p>
+<h2 id="_8">尾声：找到代码不等于找到真相</h2>
+<p>又是深夜。</p>
+<p>经过多轮检索、调用链追踪和日志核对，Agent 终于发现了那条危险的支付重试路径。</p>
+<p>然而，修复任务仍然没有结束。</p>
+<p>因为真正的难点正在前方。</p>
+<p>假设 Agent 找到了一段可疑代码：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>catch (SocketTimeoutException e) {
+    return paymentClient.execute(request);
+}
+</code></pre></div></div>
+
+<p>它应该直接删除重试吗？</p>
+<p>不一定。</p>
+<p>如果直接删除，可能导致原本依赖安全重试机制的支付请求无法完成。</p>
+<p>它应该给整个方法加锁吗？</p>
+<p>也不一定。</p>
+<p>因为本地锁未必能控制多个服务实例，更不能代替支付渠道的幂等语义。</p>
+<p>它应该修改数据库表吗？</p>
+<p>有可能，但可能涉及数据迁移、事务一致性与系统兼容性。</p>
+<p>林川看着屏幕，突然理解了一件事。</p>
+<p>定位 Bug 是找到可疑的因果链，修复 Bug 则是改变系统行为，同时尽可能不破坏其他正确行为。</p>
+<p>陈工最后说：</p>
+<p>“你已经学会让 Agent 找到问题。”</p>
+<p>“下一章，我们要让它回答一个更困难的问题。”</p>
+<p>“用户说的 Bug，真的存在吗？”</p>
+<h2 id="_9">本章知识总结</h2>
+<table>
+<thead>
+<tr>
+<th>知识点</th>
+<th>主要作用</th>
+<th>重要程度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ripgrep</td>
+<td>快速召回候选代码</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>AST</td>
+<td>理解类、方法、调用等语法结构</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>LSP</td>
+<td>跨文件符号导航、引用与类型信息</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>调用图</td>
+<td>追踪 Bug 的传播与潜在根因</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Code Embedding</td>
+<td>解决自然语言和代码命名差异</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>Code RAG</td>
+<td>构建可复用的代码检索上下文</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>Hybrid Search</td>
+<td>融合关键词与语义候选</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>Context Builder</td>
+<td>在 Token 预算内选取有效代码</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>检索评测</td>
+<td>验证定位效果与成本收益</td>
+<td>P0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bug_1">下一章：《Bug 审判庭——如何证明问题真的存在？》</h3>
+<p>下一章，林川会遇到一场更复杂的事故。</p>
+<p>一个用户向 Coding Agent 提交了 Bug：</p>
+<blockquote>
+<p>“登录接口存在严重的并发问题，可能导致不同用户拿到相同的 Token，请自动修复。”</p>
+</blockquote>
+<p>Agent 很快找到了可疑代码，甚至生成了修复补丁。</p>
+<p>但陈工却发现了一个致命的问题：</p>
+<p>这个 Bug 可能根本不存在。</p>
+<p>接下来，我们会从最基础开始，深入讲解 Bug 验证、测试生成、JUnit 5、Mockito、Testcontainers、最小复现、并发测试、日志分析、环境依赖、差分测试、修复前后对照实验，以及 Coding Agent 如何避免为了修复一个不存在的 Bug 而破坏正确代码。</p>
+<p>这将是你的 Coding Agent 实习项目中最值得深入理解的技术环节之一：如何让 AI 从“我觉得这里有问题”，走向“我能够提供可靠的证据”。</p></article><section class="chapter-extras"><h2>把这一章放进实验</h2><section class="lab" data-lab="retrieval" aria-label="从描述找到代码"><div class="lab-heading"><p class="eyebrow">LOCAL EXPERIMENT</p><h2>从描述找到代码</h2><p>浏览器内的教学模拟，数据与结果均非真实平台测量。</p></div><div class="lab-body"></div></section><a class="text-link" href="practice.html">全部七个交互实验 →</a></section><section class="quiz" data-quiz="3" aria-label="第3章练习"><h2>章末练习</h2><p>三道题，检查你是否理解了工程取舍。</p><div class="quiz-body"></div></section><nav class="chapter-nav" aria-label="上下章"><a href="chapter-02.html">← 上一章</a><a href="chapter-04.html">下一章 →</a></nav></main></div><footer><a href="index.html">Agent 帝国：代码审判者</a> · 第一卷完 · 九章<br><a href="practice.html">交互实验</a> · <a href="reading.html">我的阅读</a> · <a href="editorial.html">内容说明与来源</a> · <a href="https://github.com/wupzl/coding-agent-reader">项目源码 ↗</a><br><small>小说式工程学习 · 无需登录 · 记录保存在当前浏览器</small></footer>
+<dialog id="search-dialog" aria-labelledby="search-title"><div class="dialog-heading"><h2 id="search-title">搜索全书</h2><button id="search-close" aria-label="关闭搜索">×</button></div><label for="query">关键词或代码，例如 幂等、Tool Registry、SSRF</label><input id="query" type="search" placeholder="搜索九章正文…" autocomplete="off"><p id="search-status" role="status">输入关键词开始搜索</p><div id="search-results"></div></dialog><div id="toast" role="status" aria-live="polite"></div></body></html>

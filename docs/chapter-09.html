@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="description" content="Agent 帝国：代码审判者。九章小说式 Coding Agent 工程阅读，含本地交互实验与章末练习。"><title>终极面试——从实习项目到真正的工程体系 · Agent 帝国</title><script>try{document.documentElement.dataset.theme=localStorage.getItem('coding-agent-theme')||'white';document.documentElement.style.setProperty('--reading-size',Math.max(16,Math.min(26,Number(localStorage.getItem('coding-agent-size'))||18))+'px')}catch(e){}</script><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="shelf-nav.css"><link rel="stylesheet" href="reader.css"><link rel="stylesheet" href="syntax.css"><script src="app.js" defer></script><script src="labs.js" defer></script></head>
+<body data-chapter="9"><a class="skip" href="#main">跳到正文</a><div id="progress" aria-hidden="true"></div><header><a class="brand" href="index.html">Agent 帝国<span>THE CODE TRIBUNAL</span></a><nav class="shelf-nav" aria-label="学习项目导航"><a class="shelf-home" href="/">← 学习书架</a><details class="shelf-switch"><summary>切换项目 ▾</summary><div class="shelf-menu"><a href="/pytorch-apprentice/">PyTorch：炼金术士的学徒</a><a href="/ai-era-reader/">AI 纪元</a><a href="/data-empire-reader/">数据帝国</a><a href="/rag-empire-reader/">RAG 帝国</a><a href="/system-design-reader/">系统设计</a><a href="/online-troubleshooting-reader/">生产环境</a><a href="/coding-agent-reader/" aria-current="page">Agent 帝国</a></div></details></nav><div class="controls"><button id="search-open" aria-label="搜索全书" title="搜索全书（/）">搜索</button><button id="smaller" aria-label="缩小字号">A−</button><button id="larger" aria-label="增大字号">A＋</button><button id="theme" aria-label="切换阅读背景">纯白</button></div></header>
+<div class="reader-layout"><aside><a href="index.html">← 全书导航</a><details class="book-toc"><summary>九章工程旅程</summary><nav aria-label="全书章节"><a href="chapter-01.html"><span>01</span> 一条 URL 引发的代码战争</a><a href="chapter-02.html"><span>02</span> 智能体的大脑——Agent Loop 与工具调用</a><a href="chapter-03.html"><span>03</span> 百万行代码迷宫——Agent 如何找到真正的 Bug？</a><a href="chapter-04.html"><span>04</span> Bug 审判庭——如何证明一个 Bug 真的存在？</a><a href="chapter-05.html"><span>05</span> 代码外科医生——AI 如何安全地修改百万行代码？</a><a href="chapter-06.html"><span>06</span> 云端战争——一千个 Coding Agent 同时觉醒</a><a href="chapter-07.html"><span>07</span> 安全与失控——当 Agent 获得执行权限</a><a href="chapter-08.html"><span>08</span> 评测法庭——如何证明 Coding Agent 真的变聪明了？</a><a href="chapter-09.html" aria-current="page"><span>09</span> 终极面试——从实习项目到真正的工程体系</a></nav></details><p class="eyebrow">本章目录</p><div class="toc">
+<ul>
+<li><a href="#_1">第一幕：面试官的第一句话</a></li>
+<li><a href="#agent-workflow">第二幕：Agent 和 Workflow，究竟有什么区别？</a></li>
+<li><a href="#agent">第三幕：不给框架，你能不能自己写一个 Agent？</a></li>
+<li><a href="#bug">第四幕：你说能够判断 Bug 是否存在，怎么判断？</a></li>
+<li><a href="#agent-bug">第五幕：一百万行代码，Agent 如何定位 Bug？</a></li>
+<li><a href="#_4">第六幕：最危险的问题——你真正做过哪些工程模块？</a></li>
+<li><a href="#_5">第七幕：真实技术难点应该怎么讲？</a></li>
+<li><a href="#bug_1">第八幕：如果十万个 Bug 同时提交，怎么设计？</a></li>
+<li><a href="#_6">第九幕：你这个项目到底有什么技术壁垒？</a></li>
+<li><a href="#_7">第十幕：项目介绍应该怎么讲，才能体现真实能力？</a></li>
+<li><a href="#_8">第十一幕：最后十道高压追问</a></li>
+<li><a href="#_9">终章：面试结束之后</a></li>
+<li><a href="#agent_1">《Agent 帝国》第一卷完结：完整知识体系</a></li>
+<li><a href="#agent_2">第二卷预告：《Agent 帝国：从零重建》</a></li>
+</ul>
+</div>
+<a href="reading.html">我的进度与书签 →</a></aside><main id="main" class="chapter-main"><div class="chapter-heading"><p class="eyebrow">CHAPTER 09 / 09 · 约 23 分钟</p><h1>终极面试——从实习项目到真正的工程体系</h1><p>工程取舍 · 实习复盘 · 面试表达</p><div class="chapter-tools"><button id="bookmark" type="button" aria-pressed="false">收藏当前位置</button><a href="reading.html">我的阅读 →</a><span id="read-status" role="status"></span></div></div><details class="mobile-toc"><summary>章节与本章目录</summary><nav class="book-links"><a href="chapter-01.html"><span>01</span> 一条 URL 引发的代码战争</a><a href="chapter-02.html"><span>02</span> 智能体的大脑——Agent Loop 与工具调用</a><a href="chapter-03.html"><span>03</span> 百万行代码迷宫——Agent 如何找到真正的 Bug？</a><a href="chapter-04.html"><span>04</span> Bug 审判庭——如何证明一个 Bug 真的存在？</a><a href="chapter-05.html"><span>05</span> 代码外科医生——AI 如何安全地修改百万行代码？</a><a href="chapter-06.html"><span>06</span> 云端战争——一千个 Coding Agent 同时觉醒</a><a href="chapter-07.html"><span>07</span> 安全与失控——当 Agent 获得执行权限</a><a href="chapter-08.html"><span>08</span> 评测法庭——如何证明 Coding Agent 真的变聪明了？</a><a href="chapter-09.html" aria-current="page"><span>09</span> 终极面试——从实习项目到真正的工程体系</a></nav><div class="toc">
+<ul>
+<li><a href="#_1">第一幕：面试官的第一句话</a></li>
+<li><a href="#agent-workflow">第二幕：Agent 和 Workflow，究竟有什么区别？</a></li>
+<li><a href="#agent">第三幕：不给框架，你能不能自己写一个 Agent？</a></li>
+<li><a href="#bug">第四幕：你说能够判断 Bug 是否存在，怎么判断？</a></li>
+<li><a href="#agent-bug">第五幕：一百万行代码，Agent 如何定位 Bug？</a></li>
+<li><a href="#_4">第六幕：最危险的问题——你真正做过哪些工程模块？</a></li>
+<li><a href="#_5">第七幕：真实技术难点应该怎么讲？</a></li>
+<li><a href="#bug_1">第八幕：如果十万个 Bug 同时提交，怎么设计？</a></li>
+<li><a href="#_6">第九幕：你这个项目到底有什么技术壁垒？</a></li>
+<li><a href="#_7">第十幕：项目介绍应该怎么讲，才能体现真实能力？</a></li>
+<li><a href="#_8">第十一幕：最后十道高压追问</a></li>
+<li><a href="#_9">终章：面试结束之后</a></li>
+<li><a href="#agent_1">《Agent 帝国》第一卷完结：完整知识体系</a></li>
+<li><a href="#agent_2">第二卷预告：《Agent 帝国：从零重建》</a></li>
+</ul>
+</div>
+</details><details class="editor-note"><summary>阅读提示 · 分清故事示例与个人经历</summary><p>林川的叙事与本书的代码属于教学案例。面试表达应以自己的真实职责、代码、证据和可核实指标为准；第二卷在本项目中仅保留原文预告。</p></details><article><p>核心技术：Coding Agent 系统设计 · Java/Spring Boot · Agent Loop · Tool Calling · Bug Verification · Sandbox · 分布式架构 · 性能优化 · 项目面试</p>
+<blockquote>
+<p>前情提要：</p>
+<p>第一章，林川认识了企业内网 Coding Agent。</p>
+<p>第二章，他掌握了 Agent Loop 与工具调用。</p>
+<p>第三章，他学会了从百万行代码中定位 Bug。</p>
+<p>第四章，他建立了 Bug Verification 体系。</p>
+<p>第五章，他掌握了 Patch 生成与代码安全修改。</p>
+<p>第六章，他学会了企业内网云端部署、高并发调度与故障恢复。</p>
+<p>第七章，他建立了 Prompt Injection 防御与 Sandbox 隔离。</p>
+<p>第八章，他掌握了 SWE-bench、Golden Dataset、Pass@K 与可信评测。</p>
+<p>如今，林川已经掌握了构建 Coding Agent 所需的主要技术。</p>
+<p>但最后一场考验，不是写代码。</p>
+<p>而是向一位高级 AI 工程师证明：他真正理解自己构建的系统。</p>
+</blockquote>
+<h2 id="_1">第一幕：面试官的第一句话</h2>
+<p>上午九点。</p>
+<p>林川坐在一家大型 AI 公司的会议室里。</p>
+<p>对面是一位有十多年后端与 AI 基础设施经验的面试官。</p>
+<p>“先介绍一下你的实习项目。”</p>
+<p>林川调整了一下呼吸。</p>
+<p>“我参与的是一个部署在公司内网云端的 Coding Agent 项目。用户可以输入项目地址、项目名称，以及项目存在的 Bug 描述。”</p>
+<p>“系统会获取项目代码，分析相关文件，判断 Bug 是否存在。如果确认问题，就尝试修改代码，并通过编译和测试验证修复效果。”</p>
+<p>面试官点点头。</p>
+<p>“听起来就是把代码发给大模型，让它生成补丁。”</p>
+<p>林川没有急着反驳。</p>
+<p>“模型生成补丁是其中一个环节，但完整的任务还涉及仓库上下文获取、工具调用、Bug 验证、修改范围约束、测试执行和任务状态管理。”</p>
+<p>面试官问：</p>
+<p>“那你们为什么需要 Agent？为什么不直接写一个固定工作流？”</p>
+<p>林川想了想。</p>
+<p>“因为不同 Bug 所需要的分析路径不同。”</p>
+<p>“例如，编译错误可能通过静态分析和编译器输出定位；而并发 Bug 需要检查调用链、事务与数据库行为。”</p>
+<p>“固定工作流可以定义总体阶段，但每个阶段内部需要根据实际证据动态决定下一步操作。”</p>
+<p>面试官抬起头。</p>
+<p>“所以，你认为 Agent 和 Workflow 的区别是什么？”</p>
+<h2 id="agent-workflow">第二幕：Agent 和 Workflow，究竟有什么区别？</h2>
+<p>林川走到白板前。</p>
+<p>他先画出普通 Workflow：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>获取仓库
+   ↓
+搜索代码
+   ↓
+调用模型
+   ↓
+修改代码
+   ↓
+运行测试
+   ↓
+输出结果
+</code></pre></div></div>
+
+<p>然后画出 Agent：</p>
+<p>Workflow 与 Agent 的执行方式</p>
+<p>固定 Workflow</p>
+<p>读取代码</p>
+<p>分析代码</p>
+<p>生成补丁</p>
+<p>运行测试</p>
+<p>流程由程序预先定义</p>
+<p>Agent Loop</p>
+<p>模型判断下一步</p>
+<p>调用工具</p>
+<p>观察实际结果</p>
+<p>继续决策或结束</p>
+<p>林川解释：</p>
+<p>“Workflow 的特点是步骤和状态转换主要由开发者预先定义。”</p>
+<p>“Agent 则允许模型根据环境反馈动态选择工具和局部行动。”</p>
+<p>“但它们不是完全对立的。”</p>
+<p>面试官问：</p>
+<p>“什么意思？”</p>
+<p>“我们可以使用 Workflow 管理宏观阶段，例如仓库准备、Bug 验证、修复和最终审核。”</p>
+<p>“在代码检索和修复阶段，使用 Agent Loop 动态决策。”</p>
+<p>“也就是说，宏观流程确定，局部执行灵活。”</p>
+<p>面试官终于点头。</p>
+<p>“继续。”</p>
+<p>林川补充：</p>
+<p>“不是所有任务都值得使用 Agent。对于规则明确、输入输出确定的任务，固定工作流通常更可控，成本更低。”</p>
+<p>“只有当任务需要反复获取未知信息，并且下一步行动依赖实际观察结果时，Agent 的价值才更明显。”</p>
+<p>这是今天的第一个关键结论：</p>
+<p>Agent 不是 Workflow 的替代品，而是一种能够嵌入 Workflow 的动态决策机制。</p>
+<h2 id="agent">第三幕：不给框架，你能不能自己写一个 Agent？</h2>
+<p>面试官打开电脑。</p>
+<p>“现在假设没有 LangGraph，没有任何现成 Agent 框架。”</p>
+<p>“只有 Java 21、Spring Boot、一个支持 Tool Calling 的模型 API。”</p>
+<p>“你能不能实现？”</p>
+<p>林川回答：</p>
+<p>“可以。我会先实现一个最小可用的 Agent Runtime。”</p>
+<p>面试官问：</p>
+<p>“从哪里开始？”</p>
+<p>“先定义模型决策、工具注册和执行上下文。”</p>
+<h3 id="_2">第一层：模型抽象</h3>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">interface</span> <span class="nc">ModelClient</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="n">ModelDecision</span><span class="w"> </span><span class="nf">decide</span><span class="p">(</span>
+<span class="w">        </span><span class="n">AgentContext</span><span class="w"> </span><span class="n">context</span><span class="p">,</span>
+<span class="w">        </span><span class="n">List</span><span class="o">&lt;</span><span class="n">ToolSchema</span><span class="o">&gt;</span><span class="w"> </span><span class="n">availableTools</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>模型返回两类决策。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">sealed</span><span class="w"> </span><span class="kd">interface</span> <span class="nc">ModelDecision</span>
+<span class="w">    </span><span class="n">permits</span><span class="w"> </span><span class="n">ToolCallDecision</span><span class="p">,</span><span class="w"> </span><span class="n">FinalDecision</span><span class="w"> </span><span class="p">{</span>
+<span class="p">}</span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">ToolCallDecision</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">toolCallId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">toolName</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">Object</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arguments</span>
+<span class="p">)</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">ModelDecision</span><span class="w"> </span><span class="p">{}</span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">FinalDecision</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">conclusion</span>
+<span class="p">)</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">ModelDecision</span><span class="w"> </span><span class="p">{}</span>
+</code></pre></div></div>
+
+<p>面试官问：</p>
+<p>“如果模型一次返回多个 Tool Call 怎么办？”</p>
+<p>林川回答：</p>
+<p>“可以将单个工具调用扩展为工具调用列表。但不能默认并行执行。”</p>
+<p>“只读、相互独立的工具可以考虑并行；涉及文件修改、共享工作区或依赖顺序的操作，需要明确串行规则。”</p>
+<p>“工具调用结果还必须按照协议与原始调用 ID 正确关联。”</p>
+<h3 id="_3">第二层：工具接口</h3>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">interface</span> <span class="nc">AgentTool</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="nf">name</span><span class="p">();</span>
+
+<span class="w">    </span><span class="n">ToolSchema</span><span class="w"> </span><span class="nf">schema</span><span class="p">();</span>
+
+<span class="w">    </span><span class="n">ToolResult</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span>
+<span class="w">        </span><span class="n">ToolContext</span><span class="w"> </span><span class="n">context</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">Object</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arguments</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>面试官问：</p>
+<p>“Tool Registry 怎么实现？”</p>
+<p>林川回答：</p>
+<p>“通过 Spring 注入工具实现，建立工具名称到实现对象的映射。”</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="nd">@Component</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ToolRegistry</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">AgentTool</span><span class="o">&gt;</span><span class="w"> </span><span class="n">tools</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">ToolRegistry</span><span class="p">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">AgentTool</span><span class="o">&gt;</span><span class="w"> </span><span class="n">implementations</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">tools</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">implementations</span><span class="p">.</span><span class="na">stream</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="na">collect</span><span class="p">(</span><span class="n">Collectors</span><span class="p">.</span><span class="na">toUnmodifiableMap</span><span class="p">(</span>
+<span class="w">                </span><span class="n">AgentTool</span><span class="p">::</span><span class="n">name</span><span class="p">,</span>
+<span class="w">                </span><span class="n">Function</span><span class="p">.</span><span class="na">identity</span><span class="p">()</span>
+<span class="w">            </span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">AgentTool</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">AgentTool</span><span class="w"> </span><span class="n">tool</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tools</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">name</span><span class="p">);</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">tool</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span>
+<span class="w">                </span><span class="s">&quot;Unknown tool: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">name</span>
+<span class="w">            </span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">tool</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>“生产实现还会校验工具参数 Schema，并通过权限系统决定该任务能否调用指定工具。”</p>
+<h3 id="agent-loop">第三层：Agent Loop</h3>
+<p>林川写出了核心逻辑。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="n">AgentResult</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="n">AgentContext</span><span class="w"> </span><span class="n">context</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">step</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">step</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">MAX_STEPS</span><span class="p">;</span><span class="w"> </span><span class="n">step</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="c1">// 1. 检查取消、预算、任务租约</span>
+<span class="w">        </span><span class="n">runtimeGuard</span><span class="p">.</span><span class="na">check</span><span class="p">(</span><span class="n">context</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 2. 构造上下文并请求模型决策</span>
+<span class="w">        </span><span class="n">ModelDecision</span><span class="w"> </span><span class="n">decision</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">modelClient</span><span class="p">.</span><span class="na">decide</span><span class="p">(</span>
+<span class="w">            </span><span class="n">context</span><span class="p">,</span>
+<span class="w">            </span><span class="n">toolRegistry</span><span class="p">.</span><span class="na">availableSchemas</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+<span class="w">        </span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 3. 处理模型结束请求</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">decision</span><span class="w"> </span><span class="k">instanceof</span><span class="w"> </span><span class="n">FinalDecision</span><span class="w"> </span><span class="n">finalDecision</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">completionValidator</span><span class="p">.</span><span class="na">validate</span><span class="p">(</span>
+<span class="w">                </span><span class="n">context</span><span class="p">,</span>
+<span class="w">                </span><span class="n">finalDecision</span>
+<span class="w">            </span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">ToolCallDecision</span><span class="w"> </span><span class="n">call</span><span class="w"> </span><span class="o">=</span>
+<span class="w">            </span><span class="p">(</span><span class="n">ToolCallDecision</span><span class="p">)</span><span class="w"> </span><span class="n">decision</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 4. 校验工具调用权限</span>
+<span class="w">        </span><span class="n">authorizationService</span><span class="p">.</span><span class="na">check</span><span class="p">(</span><span class="n">context</span><span class="p">,</span><span class="w"> </span><span class="n">call</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 5. 执行工具</span>
+<span class="w">        </span><span class="n">ToolResult</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span>
+<span class="w">            </span><span class="n">toolExecutor</span><span class="p">.</span><span class="na">execute</span><span class="p">(</span><span class="n">context</span><span class="p">,</span><span class="w"> </span><span class="n">call</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 6. 记录观察结果和 Checkpoint</span>
+<span class="w">        </span><span class="n">context</span><span class="p">.</span><span class="na">append</span><span class="p">(</span><span class="n">call</span><span class="p">,</span><span class="w"> </span><span class="n">result</span><span class="p">);</span>
+<span class="w">        </span><span class="n">checkpointStore</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="n">context</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">AgentResult</span><span class="p">.</span><span class="na">budgetExceeded</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>面试官盯着代码。</p>
+<p>“这段代码有什么不足？”</p>
+<p>林川回答：</p>
+<p>“这是用于说明主要结构的简化实现。”</p>
+<p>“真实系统需要处理模型 API 超时、工具执行超时、异常分类、上下文裁剪、多工具调用、并发冲突、Checkpoint 一致性，以及进程崩溃后尚未记录完成的工具副作用。”</p>
+<p>面试官又问：</p>
+<p>“最大步骤数到了怎么办？”</p>
+<p>“停止自动执行，保留当前证据与修改 Artifact。如果存在未验证的补丁，不能宣布修复成功。”</p>
+<p>面试官放下笔。</p>
+<p>“不错。接下来是 Bug 验证。”</p>
+<h2 id="bug">第四幕：你说能够判断 Bug 是否存在，怎么判断？</h2>
+<p>面试官拿出一条任务。</p>
+<blockquote>
+<p>用户反馈：当库存只有一件商品时，两个用户同时购买，可能都下单成功。</p>
+</blockquote>
+<p>“你们的 Agent 要怎么验证？”</p>
+<p>林川回答：</p>
+<p>“首先确认业务不变量：库存为 1 时，最多允许一个库存扣减操作成功。”</p>
+<p>“然后通过代码检索定位库存扣减路径，检查是否存在读改写竞争。”</p>
+<p>“如果发现可能的竞争条件，生成针对性的并发测试，在隔离环境中尝试复现。”</p>
+<p>面试官问：</p>
+<p>“假设运行一千次都没有复现呢？”</p>
+<p>林川回答：</p>
+<p>“不能直接判定 Bug 不存在。”</p>
+<p>“可以检查测试是否真的覆盖到关键线程交错，数据库隔离级别是否与目标环境一致，以及是否存在锁、条件更新或乐观锁等保护机制。”</p>
+<p>“如果仍然没有证据，可以输出 NOT_REPRODUCED 或 INCONCLUSIVE，而不是强行修改。”</p>
+<p>面试官继续追问：</p>
+<p>“模型能不能自己生成一个测试，然后自己判断测试正确？”</p>
+<p>林川回答：</p>
+<p>“可以生成候选测试，但关键验收条件应该由独立验证机制检查。”</p>
+<p>“如果测试本身错误，Agent 可能把正确代码修改坏，或者通过降低断言要求获得虚假的成功。”</p>
+<p>面试官问：</p>
+<p>“那你如何证明修复有效？”</p>
+<p>林川写下：</p>
+<p>Bug 修复验证闭环</p>
+<p>1</p>
+<p>确定业务预期</p>
+<p>明确正确行为与验收标准</p>
+<p>2</p>
+<p>原始版本复现</p>
+<p>在 Base Commit 上触发对应缺陷</p>
+<p>3</p>
+<p>冻结验收证据</p>
+<p>保存测试与环境记录，防止被修复过程篡改</p>
+<p>4</p>
+<p>应用候选 Patch</p>
+<p>在干净工作区修改代码</p>
+<p>5</p>
+<p>重新验证</p>
+<p>复现测试通过，执行必要回归检查</p>
+<p>6</p>
+<p>人工审核</p>
+<p>检查根因、变更范围和剩余风险</p>
+<p>面试官问：</p>
+<p>“如果系统无法构建呢？”</p>
+<p>“记录构建失败原因，并区分环境问题、依赖缺失和代码本身错误。”</p>
+<p>“如果无法证明 Bug 存在，就不应声称已经验证完成。”</p>
+<p>面试官点了点头。</p>
+<p>“继续。”</p>
+<h2 id="agent-bug">第五幕：一百万行代码，Agent 如何定位 Bug？</h2>
+<p>面试官在白板上写下：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>项目：支付系统
+代码规模：100 万行
+
+Bug 描述：
+支付接口偶尔超时，
+但实际上已经扣款。
+</code></pre></div></div>
+
+<p>“你怎么定位？”</p>
+<p>林川回答：</p>
+<p>“我会采用渐进式检索。”</p>
+<p>“首先识别项目结构和技术栈。”</p>
+<p>“然后提取 Bug 描述中的业务实体和技术关键词，例如支付、超时、重试、支付网关。”</p>
+<p>“先使用 Ripgrep 或符号搜索获取候选文件。”</p>
+<p>“再通过 AST、LSP 或调用图沿 Controller、Service、RPC Client 追踪调用链。”</p>
+<p>“如果自然语言和代码命名差异较大，可以使用 Code Embedding 做语义补充召回。”</p>
+<p>面试官问：</p>
+<p>“为什么不直接使用向量数据库？”</p>
+<p>林川回答：</p>
+<p>“因为向量检索擅长语义相似性，但并不能准确表示所有方法调用、类型关系和业务状态流转。”</p>
+<p>“对于 Java 代码，符号解析和调用关系非常重要。”</p>
+<p>“因此，词法检索、语义检索和结构化代码导航应根据任务特点组合使用。”</p>
+<p>面试官问：</p>
+<p>“找到了 <code>PaymentService.java</code>，是不是就成功了？”</p>
+<p>“不是。问题可能发生在更底层的支付 HTTP Client 或重试逻辑中。”</p>
+<p>“例如第一次支付实际成功，但响应超时，系统在没有稳定幂等键的情况下再次发起扣款请求。”</p>
+<p>“所以需要结合实际日志、支付状态和渠道协议确认根因。”</p>
+<p>面试官抬起头。</p>
+<p>“你现在不是只在描述搜索技术，而是在解释软件系统的行为。”</p>
+<h2 id="_4">第六幕：最危险的问题——你真正做过哪些工程模块？</h2>
+<p>面试官突然换了一个问题。</p>
+<p>“你讲了很多技术。”</p>
+<p>“但是，这套 Coding Agent 的哪些部分是你本人设计和实现的？”</p>
+<p>林川停顿了一下。</p>
+<p>这个问题和之前不同。</p>
+<p>它不是考察知识，而是考察经历真实性。</p>
+<p>他想起陈工的提醒。</p>
+<p>不要把自己理解过的技术，全部说成自己实际实现过。</p>
+<p>于是，他回答：</p>
+<p>“项目整体功能是企业内网云端的 Coding Agent，面向项目 Bug 验证和自动修复。”</p>
+<p>“至于个人贡献，我会把直接开发的模块、协作完成的模块，以及自己研究过的架构方案分开介绍，并给出代码、测试或问题记录作为依据。”</p>
+<p>面试官问：</p>
+<p>“假设你负责了工具调用模块，你怎么证明？”</p>
+<p>林川回答：</p>
+<p>“可以介绍具体接口、Tool Registry 如何组织、工具参数怎么校验、权限怎么控制，以及工具失败、模型请求超时等情况如何处理。”</p>
+<p>“如果做过实际优化，我也会说明改动前后的行为差异和验证结果。”</p>
+<p>“如果只是参与过方案讨论，就不把它算成独立实现。”</p>
+<p>面试官点头。</p>
+<p>“我更愿意听到你把一个真实负责的模块讲透，而不是把整个项目所有架构都说成自己写的。”</p>
+<h2 id="_5">第七幕：真实技术难点应该怎么讲？</h2>
+<p>陈工曾经告诉林川：</p>
+<p>“面试官最容易识别的，不是你有没有记住术语，而是你能否解释一个问题从发现到解决的完整过程。”</p>
+<p>面试官提出：</p>
+<p>“请讲一个你真正遇到过的工程难点。”</p>
+<p>对于这个问题，林川使用了一套结构。</p>
+<p>工程难点表达模型：Problem → Diagnosis → Solution → Evidence</p>
+<p>01</p>
+<p>Problem</p>
+<p>具体出现了什么现象，对业务或系统造成什么影响</p>
+<p>02</p>
+<p>Diagnosis</p>
+<p>使用什么日志、Trace、测试或代码证据定位问题</p>
+<p>03</p>
+<p>Solution</p>
+<p>为什么选择这一方案，有哪些替代方案与权衡</p>
+<p>04</p>
+<p>Evidence</p>
+<p>如何验证问题解决，真实指标与剩余限制是什么</p>
+<p>例如，在假设确实遇到过 Agent 工具循环的问题时，可以这样分析：</p>
+<p>问题现象： Agent 在相同文件上重复执行 <code>read_file</code> 和 <code>search_code</code>，导致 Token 消耗增加，任务长时间无法结束。</p>
+<p>原因定位： 检查执行 Trace，发现连续多轮没有产生新的代码证据，Runtime 又缺乏有效的终止条件。</p>
+<p>解决方案： 添加最大步骤数、重复工具调用检测、任务预算，以及无进展时重新规划的机制。</p>
+<p>验证方式： 构建固定测试任务，对比优化前后的重复调用数、Token 消耗、任务完成率及误终止情况。</p>
+<p>面试官问：</p>
+<p>“你实际做过这样的优化吗？”</p>
+<p>林川回答：</p>
+<p>“如果没有，我应该把它作为工程设计思路，而不是虚构为项目经历。”</p>
+<p>这句话很重要。</p>
+<p>因为真正的工程深度，不需要依赖编造经历。</p>
+<h2 id="bug_1">第八幕：如果十万个 Bug 同时提交，怎么设计？</h2>
+<p>面试官关掉了 IDE。</p>
+<p>“现在我们进入系统设计。”</p>
+<p>“假设公司有一万名研发人员，短时间内提交十万个 Bug 修复任务。”</p>
+<p>“你怎么设计整套平台？”</p>
+<p>林川回答：</p>
+<p>“首先，我会区分任务提交并发和实际 Agent 执行并发。”</p>
+<p>“十万个任务可以进入队列，但不应该同时启动十万个 Sandbox。”</p>
+<p>他画出架构。</p>
+<p>大规模 Coding Agent 系统设计</p>
+<p>Web / API Gateway</p>
+<p>用户鉴权、项目授权、任务提交</p>
+<p>Task Service + Database + Outbox</p>
+<p>可靠创建、持久化与事件投递</p>
+<p>Message Queue + Scheduler</p>
+<p>削峰、优先级、租户配额和资源感知调度</p>
+<p>Agent Worker 1</p>
+<p>Agent Worker 2</p>
+<p>Agent Worker N</p>
+<p>Model Gateway</p>
+<p>模型调用与 Token 配额</p>
+<p>Sandbox Cluster</p>
+<p>隔离代码执行与资源配额</p>
+<p>Artifacts + Observability + Evaluation</p>
+<p>Git Diff、测试报告、日志、Trace、实验评测</p>
+<p>面试官问：</p>
+<p>“系统最主要的瓶颈是什么？”</p>
+<p>林川回答：</p>
+<p>“不能预先断言只有一个瓶颈。”</p>
+<p>“需要分别监控模型吞吐、Sandbox CPU 和内存、仓库下载、构建依赖、队列等待以及数据库状态更新。”</p>
+<p>“不同阶段受不同资源约束。”</p>
+<p>面试官问：</p>
+<p>“怎么估算容量？”</p>
+<p>林川写下 Little's Law：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>L</mi><mo>=</mo><mi>λ</mi><mi>W</mi></mrow><annotation encoding="application/x-tex"> L=\lambda W </annotation></semantics></math></span></p>
+<p>其中：</p>
+<ul>
+<li><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span>：系统内平均任务数量。</li>
+<li><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math></span>：稳定条件下的平均任务完成吞吐。</li>
+<li><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi></mrow><annotation encoding="application/x-tex">W</annotation></semantics></math></span>：平均任务停留时间。</li>
+</ul>
+<p>“如果要估算同时执行的任务数量，还需要区分排队时间和实际执行时间。”</p>
+<p>“例如稳定状态下平均每秒完成两项任务，每个任务平均执行三分钟，则平均执行中的任务数量约为 360。”</p>
+<p>“但这只是容量估算起点，还要考虑任务耗时分布、资源差异和长尾问题。”</p>
+<p>面试官继续问：</p>
+<p>“如果 Worker 崩溃，任务会不会重复执行？”</p>
+<p>林川回答：</p>
+<p>“消息可能重复投递，所以任务领取需要持久化状态、租约和执行代次。”</p>
+<p>“恢复时检查已存在的工作区、Patch 和测试 Artifact，不能盲目从头执行可能有副作用的操作。”</p>
+<p>面试官问：</p>
+<p>“如果模型服务突然不可用？”</p>
+<p>“模型网关应限制重试并提供故障降级策略。任务可以进入等待或可恢复失败状态，而不是让一千个 Worker 不断重试。”</p>
+<p>面试官最后问：</p>
+<p>“如果平台成本太高？”</p>
+<p>林川回答：</p>
+<p>“先通过 Trace 和评测判断成本来源，再考虑代码检索减少上下文、工具结果裁剪、仓库缓存、模型路由、阶段化资源调度和减少无效重试。”</p>
+<p>“但不能只追求 Token 降低，而牺牲必要的验证步骤。”</p>
+<h2 id="_6">第九幕：你这个项目到底有什么技术壁垒？</h2>
+<p>面试官忽然问：</p>
+<p>“你觉得 Coding Agent 的技术壁垒在哪里？”</p>
+<p>林川回答：</p>
+<p>“如果只是把代码和 Bug 描述交给大模型，然后返回修改建议，技术壁垒相对有限。”</p>
+<p>“但要把它建设成可靠的企业级系统，就会涉及多个困难问题。”</p>
+<p>第一，代码上下文理解。</p>
+<p>如何在大型仓库中定位与 Bug 相关的文件、调用链和业务约束。</p>
+<p>第二，任务自主执行。</p>
+<p>如何在工具执行反馈下动态规划，同时避免无限循环、状态丢失和资源失控。</p>
+<p>第三，真实 Bug 验证。</p>
+<p>如何构造可靠的复现条件，避免修复不存在的问题。</p>
+<p>第四，代码修改与独立验证。</p>
+<p>如何生成最小补丁、保护验收测试，并验证业务不变量。</p>
+<p>第五，安全与云端工程。</p>
+<p>如何让 Agent 在内网中受控执行不可信代码，并应对并发、崩溃、重复任务和资源争用。</p>
+<p>第六，可靠评测。</p>
+<p>如何证明 Agent 在陌生任务上确实提高了修复能力，而不是对固定数据集过拟合。</p>
+<p>面试官问：</p>
+<p>“这六个方向里面，哪一个最重要？”</p>
+<p>林川回答：</p>
+<p>“取决于产品定位。”</p>
+<p>“如果是面向开发者的交互式 Coding Agent，代码理解、工具体验和修复质量可能更重要。”</p>
+<p>“如果是企业内网的批量自动 Bug 修复平台，验证可信度、执行安全、权限管理与任务可靠性则更加关键。”</p>
+<p>“没有一个脱离业务场景的绝对答案。”</p>
+<p>面试官点了点头。</p>
+<h2 id="_7">第十幕：项目介绍应该怎么讲，才能体现真实能力？</h2>
+<p>面试结束前，面试官给了林川最后一个机会。</p>
+<p>“现在，请你重新介绍这个项目。”</p>
+<p>这一次，林川不再从技术名词开始。</p>
+<p>他先解释业务目标。</p>
+<p>然后说明任务执行流程。</p>
+<p>最后讲清楚工程挑战与个人贡献边界。</p>
+<p>下面这是一份可以作为你自己项目介绍基础的版本。它只使用你已经明确提供的项目事实，不把前八章讨论过的参考架构都写成你真实实现过的功能。</p>
+<p>我实习期间参与的是一个部署在公司内网云端的 Coding Agent 项目，主要面向项目代码中的 Bug 自动化分析、验证与修复场景。</p>
+<p>从业务流程来看，用户可以输入项目地址、项目名称以及 Bug 的具体描述。系统会围绕指定项目进行代码分析，判断用户报告的问题是否存在。如果确认存在问题，则进一步尝试定位相关代码并进行修复，最后通过验证流程判断修复结果。</p>
+<p>我认为这个项目与普通的 AI 问答系统相比，最大的区别在于它需要与真实代码工程环境交互。模型不仅要理解 Bug 描述，还要根据代码分析和工具执行结果逐步推进任务。</p>
+<p>从工程设计角度，这类系统需要重点考虑几个问题：首先是如何准确定位相关代码；其次是如何通过测试或其他证据验证 Bug，而不是直接相信模型的判断；然后是如何控制代码修改范围、验证补丁，并处理工具执行失败、超时和任务状态恢复等情况。</p>
+<p>此外，由于系统部署在公司内网云端，还需要考虑代码权限、数据安全与执行环境隔离。</p>
+<p>在具体项目实现中，我主要参与的模块是【填写实际负责部分】。其中遇到的主要工程问题是【填写真实问题】，我通过【填写实际方案】进行了处理，并使用【填写真实测试或指标】验证效果。</p>
+<p>这段实习让我对 Coding Agent 的认识从单纯的大模型调用，转向了模型决策、工具执行、代码环境与工程可靠性相结合的系统设计。</p>
+<p>陈工曾经提醒过林川：</p>
+<p>“面试项目时最容易出现的问题，是把自己知道的架构与自己实现过的工程混在一起。”</p>
+<p>“真正可靠的表达，应该让面试官清楚区分三层。”</p>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>应该讲什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>项目实际功能</td>
+<td>系统已经具备哪些能力</td>
+</tr>
+<tr>
+<td>本人实际贡献</td>
+<td>自己负责的模块、问题和验证结果</td>
+</tr>
+<tr>
+<td>设计理解与扩展</td>
+<td>如果规模扩大或需要生产化，会如何设计</td>
+</tr>
+</tbody>
+</table>
+<p>如果面试官进一步追问具体代码，就围绕真实实现回答，不应将参考方案说成现有系统的事实。</p>
+<h2 id="_8">第十一幕：最后十道高压追问</h2>
+<p>面试官看着林川。</p>
+<p>“最后，我再给你十个问题。”</p>
+<p>Coding Agent 终极十问</p>
+<p>展开全部</p>
+<p>01你的 Coding Agent 和普通 LLM API 包装有什么本质区别？</p>
+<p>关键在于是否能够基于工具反馈执行多轮决策，并与真实代码环境交互。但仅有 Tool Calling 不代表工程成熟，还需要状态管理、权限控制、执行验证和退出条件。</p>
+<p>02为什么使用 Agent，而不是固定工作流？</p>
+<p>03你如何证明 Bug 确实存在？</p>
+<p>04为什么测试通过不代表修复成功？</p>
+<p>05Agent 修改了几十个无关文件怎么办？</p>
+<p>06Agent 一直重复搜索同一个文件怎么办？</p>
+<p>07十万个任务同时提交，如何避免资源耗尽？</p>
+<p>08如何保证不同用户的代码不会相互泄漏？</p>
+<p>09如何证明 Agent 优化真的有效？</p>
+<p>10如果从零重新做一遍，你会最先实现什么？</p>
+<h2 id="_9">终章：面试结束之后</h2>
+<p>晚上七点。</p>
+<p>林川离开了会议室。</p>
+<p>夕阳照在大楼的玻璃幕墙上。</p>
+<p>手机突然响了。</p>
+<p>是陈工。</p>
+<p>“面试怎么样？”</p>
+<p>“问了很多问题。”</p>
+<p>“比如？”</p>
+<p>“为什么需要 Agent，为什么不能只使用固定 Workflow，如何验证 Bug，如何隔离任务，怎么证明修复成功，还有十万个任务怎么调度。”</p>
+<p>“你回答上来了吗？”</p>
+<p>“大部分能回答。”</p>
+<p>陈工笑了。</p>
+<p>“看来这几个月没有白学。”</p>
+<p>林川沉默了一会儿。</p>
+<p>“导师，我发现了一件事。”</p>
+<p>“什么？”</p>
+<p>“以前我学习新技术时，总是想记住它的定义。”</p>
+<p>“比如 Redis 是什么、MQ 是什么、Agent Loop 是什么。”</p>
+<p>“但现在我发现，真正重要的是知道为什么需要它，什么时候不应该使用它，以及它解决不了什么问题。”</p>
+<p>陈工回答：</p>
+<p>“这才是系统设计的开始。”</p>
+<p>“技术不是一堆孤立的名词。”</p>
+<p>“它们都是为了解决具体问题而出现的工具。”</p>
+<p>“当你真正理解问题，就会理解技术为什么这样设计。”</p>
+<p>林川回头看了一眼公司大楼。</p>
+<p>他想起第一天见到 Coding Agent 的情景。</p>
+<p>那个时候，他认为最神奇的事情，是用户只输入一段 Bug 描述，AI 就能生成代码。</p>
+<p>而现在，他知道了完整的工程过程：</p>
+<p>模型需要理解任务。</p>
+<p>工具需要提供真实信息。</p>
+<p>代码需要能够被定位。</p>
+<p>Bug 需要证据证明。</p>
+<p>补丁需要控制范围。</p>
+<p>测试需要保证可信。</p>
+<p>任务需要可靠执行。</p>
+<p>权限需要受到约束。</p>
+<p>效果需要独立评测。</p>
+<p>他终于明白：</p>
+<p>AI 工程的真正深度，并不只在于模型能生成什么，而在于我们如何把模型的不确定能力，转化成一个能够被验证、被控制、被维护的工程系统。</p>
+<h2 id="agent_1">《Agent 帝国》第一卷完结：完整知识体系</h2>
+<table>
+<thead>
+<tr>
+<th>章节</th>
+<th>核心主题</th>
+<th>最重要的工程问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第一章</td>
+<td>Coding Agent 整体架构</td>
+<td>从 Bug 描述到修复的完整链路</td>
+</tr>
+<tr>
+<td>第二章</td>
+<td>Agent Loop 与 Tool Calling</td>
+<td>模型如何动态调用真实工具</td>
+</tr>
+<tr>
+<td>第三章</td>
+<td>代码检索与理解</td>
+<td>如何在大型仓库中找到根因</td>
+</tr>
+<tr>
+<td>第四章</td>
+<td>Bug Verification</td>
+<td>如何证明 Bug 存在</td>
+</tr>
+<tr>
+<td>第五章</td>
+<td>Patch 与自动修复</td>
+<td>如何安全地修改代码</td>
+</tr>
+<tr>
+<td>第六章</td>
+<td>云端高并发架构</td>
+<td>如何稳定执行大量 Agent 任务</td>
+</tr>
+<tr>
+<td>第七章</td>
+<td>Agent 安全体系</td>
+<td>如何约束模型与工具权限</td>
+</tr>
+<tr>
+<td>第八章</td>
+<td>Coding Agent 评测</td>
+<td>如何证明修复效果可靠</td>
+</tr>
+<tr>
+<td>第九章</td>
+<td>工程与面试整合</td>
+<td>如何独立设计并解释完整系统</td>
+</tr>
+</tbody>
+</table>
+<h2 id="agent_2">第二卷预告：《Agent 帝国：从零重建》</h2>
+<p>第一卷结束后，林川接到了一份新的任务。</p>
+<p>陈工把整个 Coding Agent 平台的源代码移走，只留下：</p>
+<p>一套 JDK 21 开发环境。</p>
+<p>一个 Spring Boot 项目。</p>
+<p>一个能够调用大模型的 API。</p>
+<p>一个可以访问的测试 Git 仓库。</p>
+<p>以及一条用户任务：</p>
+<blockquote>
+<p>“请检查订单服务是否存在重复创建订单的问题。如果存在，自动生成补丁并完成验证。”</p>
+</blockquote>
+<p>陈工说道：</p>
+<p>“之前你已经理解了整个系统。”</p>
+<p>“现在，我要你从空项目开始，一行一行把它重新写出来。”</p>
+<p>第二卷将以真实 Java 工程代码为核心，从 Maven 项目初始化开始，逐步构建模型客户端、Tool Registry、Agent Runtime、Git 仓库管理、代码检索、Bug Verification、Patch 应用、Sandbox 执行、任务 API、SSE 事件流与评测模块。</p>
+<p>第二卷第一章：《空白的 Spring Boot 项目——从零实现第一个能真正读写代码的 Agent》。</p></article><section class="chapter-extras"><h2>把这一章放进实验</h2><section class="lab" data-lab="loop" aria-label="Agent 的下一步"><div class="lab-heading"><p class="eyebrow">LOCAL EXPERIMENT</p><h2>Agent 的下一步</h2><p>浏览器内的教学模拟，数据与结果均非真实平台测量。</p></div><div class="lab-body"></div></section><a class="text-link" href="practice.html">全部七个交互实验 →</a></section><section class="quiz" data-quiz="9" aria-label="第9章练习"><h2>章末练习</h2><p>三道题，检查你是否理解了工程取舍。</p><div class="quiz-body"></div></section><nav class="chapter-nav" aria-label="上下章"><a href="chapter-08.html">← 上一章</a><a href="index.html">第一卷完 · 返回目录 →</a></nav></main></div><footer><a href="index.html">Agent 帝国：代码审判者</a> · 第一卷完 · 九章<br><a href="practice.html">交互实验</a> · <a href="reading.html">我的阅读</a> · <a href="editorial.html">内容说明与来源</a> · <a href="https://github.com/wupzl/coding-agent-reader">项目源码 ↗</a><br><small>小说式工程学习 · 无需登录 · 记录保存在当前浏览器</small></footer>
+<dialog id="search-dialog" aria-labelledby="search-title"><div class="dialog-heading"><h2 id="search-title">搜索全书</h2><button id="search-close" aria-label="关闭搜索">×</button></div><label for="query">关键词或代码，例如 幂等、Tool Registry、SSRF</label><input id="query" type="search" placeholder="搜索九章正文…" autocomplete="off"><p id="search-status" role="status">输入关键词开始搜索</p><div id="search-results"></div></dialog><div id="toast" role="status" aria-live="polite"></div></body></html>

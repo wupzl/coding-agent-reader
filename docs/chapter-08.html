@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="description" content="Agent 帝国：代码审判者。九章小说式 Coding Agent 工程阅读，含本地交互实验与章末练习。"><title>评测法庭——如何证明 Coding Agent 真的变聪明了？ · Agent 帝国</title><script>try{document.documentElement.dataset.theme=localStorage.getItem('coding-agent-theme')||'white';document.documentElement.style.setProperty('--reading-size',Math.max(16,Math.min(26,Number(localStorage.getItem('coding-agent-size'))||18))+'px')}catch(e){}</script><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="shelf-nav.css"><link rel="stylesheet" href="reader.css"><link rel="stylesheet" href="syntax.css"><script src="app.js" defer></script><script src="labs.js" defer></script></head>
+<body data-chapter="8"><a class="skip" href="#main">跳到正文</a><div id="progress" aria-hidden="true"></div><header><a class="brand" href="index.html">Agent 帝国<span>THE CODE TRIBUNAL</span></a><nav class="shelf-nav" aria-label="学习项目导航"><a class="shelf-home" href="/">← 学习书架</a><details class="shelf-switch"><summary>切换项目 ▾</summary><div class="shelf-menu"><a href="/pytorch-apprentice/">PyTorch：炼金术士的学徒</a><a href="/ai-era-reader/">AI 纪元</a><a href="/data-empire-reader/">数据帝国</a><a href="/rag-empire-reader/">RAG 帝国</a><a href="/system-design-reader/">系统设计</a><a href="/online-troubleshooting-reader/">生产环境</a><a href="/coding-agent-reader/" aria-current="page">Agent 帝国</a></div></details></nav><div class="controls"><button id="search-open" aria-label="搜索全书" title="搜索全书（/）">搜索</button><button id="smaller" aria-label="缩小字号">A−</button><button id="larger" aria-label="增大字号">A＋</button><button id="theme" aria-label="切换阅读背景">纯白</button></div></header>
+<div class="reader-layout"><aside><a href="index.html">← 全书导航</a><details class="book-toc"><summary>九章工程旅程</summary><nav aria-label="全书章节"><a href="chapter-01.html"><span>01</span> 一条 URL 引发的代码战争</a><a href="chapter-02.html"><span>02</span> 智能体的大脑——Agent Loop 与工具调用</a><a href="chapter-03.html"><span>03</span> 百万行代码迷宫——Agent 如何找到真正的 Bug？</a><a href="chapter-04.html"><span>04</span> Bug 审判庭——如何证明一个 Bug 真的存在？</a><a href="chapter-05.html"><span>05</span> 代码外科医生——AI 如何安全地修改百万行代码？</a><a href="chapter-06.html"><span>06</span> 云端战争——一千个 Coding Agent 同时觉醒</a><a href="chapter-07.html"><span>07</span> 安全与失控——当 Agent 获得执行权限</a><a href="chapter-08.html" aria-current="page"><span>08</span> 评测法庭——如何证明 Coding Agent 真的变聪明了？</a><a href="chapter-09.html"><span>09</span> 终极面试——从实习项目到真正的工程体系</a></nav></details><p class="eyebrow">本章目录</p><div class="toc">
+<ul>
+<li><a href="#_1">第一幕：那张漂亮得令人怀疑的成绩单</a></li>
+<li><a href="#_2">第二幕：评测到底在测什么？</a></li>
+<li><a href="#swe-benchai">第三幕：SWE-bench——AI 程序员的考试</a></li>
+<li><a href="#golden-dataset">第四幕：Golden Dataset——建立自己的标准题库</a></li>
+<li><a href="#_4">第五幕：训练集、开发集、测试集——为什么越调越容易过拟合？</a></li>
+<li><a href="#pass1-passk">第六幕：Pass@1 与 Pass@K——一次修好和试十次修好一样吗？</a></li>
+<li><a href="#_6">第七幕：一个绿色的测试，可能掩盖一个错误的修复</a></li>
+<li><a href="#llm-as-a-judge-ai-agent">第八幕：LLM-as-a-Judge——让另一个 AI 给 Agent 打分？</a></li>
+<li><a href="#78-60">第九幕：统计显著性——78% 一定比 60% 好吗？</a></li>
+<li><a href="#java">第十幕：评测平台——如何用 Java 构建自动化实验系统？</a></li>
+<li><a href="#_10">第十一幕：为什么每次实验必须冻结所有变量？</a></li>
+<li><a href="#_12">第十二幕：成本、延迟与修复质量——不存在免费的智能</a></li>
+<li><a href="#30">第十三幕：失败归因——为什么 30% 的任务没有修好？</a></li>
+<li><a href="#bug_1">第十四幕：真正的验收——一批从未见过的新 Bug</a></li>
+<li><a href="#coding-agent">第十五幕：终极面试——如何证明你的 Coding Agent 真有工程价值？</a></li>
+<li><a href="#_13">尾声：真正的工程能力，需要接受审判</a></li>
+<li><a href="#_14">第八章知识复盘</a></li>
+</ul>
+</div>
+<a href="reading.html">我的进度与书签 →</a></aside><main id="main" class="chapter-main"><div class="chapter-heading"><p class="eyebrow">CHAPTER 08 / 09 · 约 33 分钟</p><h1>评测法庭——如何证明 Coding Agent 真的变聪明了？</h1><p>SWE-bench · Pass@K · 配对评测</p><div class="chapter-tools"><button id="bookmark" type="button" aria-pressed="false">收藏当前位置</button><a href="reading.html">我的阅读 →</a><span id="read-status" role="status"></span></div></div><details class="mobile-toc"><summary>章节与本章目录</summary><nav class="book-links"><a href="chapter-01.html"><span>01</span> 一条 URL 引发的代码战争</a><a href="chapter-02.html"><span>02</span> 智能体的大脑——Agent Loop 与工具调用</a><a href="chapter-03.html"><span>03</span> 百万行代码迷宫——Agent 如何找到真正的 Bug？</a><a href="chapter-04.html"><span>04</span> Bug 审判庭——如何证明一个 Bug 真的存在？</a><a href="chapter-05.html"><span>05</span> 代码外科医生——AI 如何安全地修改百万行代码？</a><a href="chapter-06.html"><span>06</span> 云端战争——一千个 Coding Agent 同时觉醒</a><a href="chapter-07.html"><span>07</span> 安全与失控——当 Agent 获得执行权限</a><a href="chapter-08.html" aria-current="page"><span>08</span> 评测法庭——如何证明 Coding Agent 真的变聪明了？</a><a href="chapter-09.html"><span>09</span> 终极面试——从实习项目到真正的工程体系</a></nav><div class="toc">
+<ul>
+<li><a href="#_1">第一幕：那张漂亮得令人怀疑的成绩单</a></li>
+<li><a href="#_2">第二幕：评测到底在测什么？</a></li>
+<li><a href="#swe-benchai">第三幕：SWE-bench——AI 程序员的考试</a></li>
+<li><a href="#golden-dataset">第四幕：Golden Dataset——建立自己的标准题库</a></li>
+<li><a href="#_4">第五幕：训练集、开发集、测试集——为什么越调越容易过拟合？</a></li>
+<li><a href="#pass1-passk">第六幕：Pass@1 与 Pass@K——一次修好和试十次修好一样吗？</a></li>
+<li><a href="#_6">第七幕：一个绿色的测试，可能掩盖一个错误的修复</a></li>
+<li><a href="#llm-as-a-judge-ai-agent">第八幕：LLM-as-a-Judge——让另一个 AI 给 Agent 打分？</a></li>
+<li><a href="#78-60">第九幕：统计显著性——78% 一定比 60% 好吗？</a></li>
+<li><a href="#java">第十幕：评测平台——如何用 Java 构建自动化实验系统？</a></li>
+<li><a href="#_10">第十一幕：为什么每次实验必须冻结所有变量？</a></li>
+<li><a href="#_12">第十二幕：成本、延迟与修复质量——不存在免费的智能</a></li>
+<li><a href="#30">第十三幕：失败归因——为什么 30% 的任务没有修好？</a></li>
+<li><a href="#bug_1">第十四幕：真正的验收——一批从未见过的新 Bug</a></li>
+<li><a href="#coding-agent">第十五幕：终极面试——如何证明你的 Coding Agent 真有工程价值？</a></li>
+<li><a href="#_13">尾声：真正的工程能力，需要接受审判</a></li>
+<li><a href="#_14">第八章知识复盘</a></li>
+</ul>
+</div>
+</details><details class="editor-note"><summary>阅读提示 · 评测结论必须附带实验条件</summary><p>SWE-bench 通过代码库、问题和补丁评估软件问题解决能力。Pass@K 应说明采样和预算；同一任务集比较应保留逐题配对结果，并同时报告样本量、成本和不确定性。</p></details><article><p>核心技术：SWE-bench · Golden Dataset · Pass@1/Pass@K · Verified Repair Rate · 测试集污染 · 过拟合 · LLM-as-a-Judge · A/B 测试 · 统计显著性 · Java 评测平台</p>
+<blockquote>
+<p>前情提要：</p>
+<p>第一章，林川认识了自动化 Bug 修复平台。</p>
+<p>第二章，他学会了 Agent Loop 与工具调用。</p>
+<p>第三章，他掌握了代码检索与根因定位。</p>
+<p>第四章，他建立了 Bug Verification 体系。</p>
+<p>第五章，他学会让 Agent 生成安全、可审查的代码补丁。</p>
+<p>第六章，他让系统能够在企业内网云端可靠执行大量任务。</p>
+<p>第七章，他建立了 Prompt Injection 防御、Tool Guard 与 Sandbox 安全体系。</p>
+<p>如今，这套 Coding Agent 已经可以接受项目 URL、分析 Bug、验证问题并尝试自动修复。</p>
+<p>但公司技术负责人问出了一个问题：</p>
+<p>“你们说新版 Agent 的修复能力提升了 30%，证据是什么？”</p>
+</blockquote>
+<h2 id="_1">第一幕：那张漂亮得令人怀疑的成绩单</h2>
+<p>上午九点。</p>
+<p>公司研发中心的会议室里，一场重要的项目验收正在进行。</p>
+<p>林川站在投影仪旁，展示最新版本的 Coding Agent。</p>
+<p>屏幕上是一张漂亮的成绩单。</p>
+<p>CodeAgent v2.0 · 内部评测报告</p>
+<p>测试通过</p>
+<p>旧版任务通过率</p>
+<h3 id="60">60%</h3>
+<p>新版任务通过率</p>
+<h3 id="78">78%</h3>
+<p>0%25%50%75%100%Agent v1Agent v2</p>
+<p>小说中的模拟评测数据</p>
+<p>相对提升 30%；绝对提升 18 个百分点</p>
+<p>本章涉及的项目实验数字均为教学模拟数据，不代表你的真实实习成果。</p>
+<p>林川说道：</p>
+<p>“我们优化了 Agent 的代码检索、上下文管理和 Patch 生成策略，修复任务通过率由 60% 提高到 78%。”</p>
+<p>技术负责人周总点点头。</p>
+<p>随后，他问出了第一个问题。</p>
+<p>“测试了多少个 Bug？”</p>
+<p>“一百个。”</p>
+<p>“从哪里来的？”</p>
+<p>“我们收集了一些项目中曾经遇到的问题。”</p>
+<p>“你们是不是用这批问题反复调整过 Prompt？”</p>
+<p>“是的，调过很多次。”</p>
+<p>周总放下笔。</p>
+<p>“那这 78%，到底代表 Agent 的泛化能力，还是代表它越来越熟悉这一百道题？”</p>
+<p>会议室突然安静下来。</p>
+<p>林川还没有回答，周总又问：</p>
+<p>“这些 Bug 是不是真的存在？”</p>
+<p>“它们的测试用例是不是正确？”</p>
+<p>“模型有没有在训练中见过原始修复代码？”</p>
+<p>“你们有没有只统计成功启动的任务，把环境失败的任务排除掉？”</p>
+<p>“它修复的是根因，还是修改了测试，让测试变绿？”</p>
+<p>林川望着屏幕。</p>
+<p>他突然意识到：</p>
+<p>他们建立了一个会修 Bug 的 Agent。</p>
+<p>却没有建立一个足够可靠的体系，来判断 Agent 到底有多会修 Bug。</p>
+<p>陈工站起身，在白板上写下：</p>
+<p>一个 Agent 的能力，不能用几段成功演示来证明。</p>
+<h2 id="_2">第二幕：评测到底在测什么？</h2>
+<p>周总问：</p>
+<p>“假设我们的 Coding Agent 修复了十个 Bug，你认为系统成功率是多少？”</p>
+<p>林川答：</p>
+<p>“十个全部修好，就是 100%。”</p>
+<p>“如果这十个 Bug 都只有一行代码呢？”</p>
+<p>“那可能太简单。”</p>
+<p>“如果另外十个涉及分布式事务、并发竞争和跨服务调用呢？”</p>
+<p>“可能很难修好。”</p>
+<p>“所以你比较的究竟是什么？”</p>
+<p>林川开始思考。</p>
+<p>陈工接过话：</p>
+<p>“评测必须先定义任务分布和成功标准。”</p>
+<p>对于他们的 Coding Agent，完整流程包括：</p>
+<p>Coding Agent 端到端能力链</p>
+<p>1</p>
+<p>Repository Understanding</p>
+<p>能否正确获取并理解仓库</p>
+<p>2</p>
+<p>Bug Localization</p>
+<p>能否定位相关文件和方法</p>
+<p>3</p>
+<p>Bug Verification</p>
+<p>能否确认或合理拒绝 Bug 主张</p>
+<p>4</p>
+<p>Patch Generation</p>
+<p>能否形成符合任务要求的修改</p>
+<p>5</p>
+<p>Patch Validation</p>
+<p>补丁能否构建并通过必要测试</p>
+<p>6</p>
+<p>Safety &amp; Review</p>
+<p>是否遵守权限与修改范围要求</p>
+<p>陈工说道：</p>
+<p>“如果最终没有修复成功，问题可能出现在任何一个环节。”</p>
+<p>“例如，Agent 找对了代码，但写错了补丁。”</p>
+<p>“也可能补丁正确，但测试环境根本启动不了。”</p>
+<p>“还有可能原本就不存在 Bug，却被 Agent 错误修改。”</p>
+<p>因此，不能只用一个笼统的“任务成功率”概括所有能力。</p>
+<h3 id="_3">如何定义端到端成功率？</h3>
+<p>对于已经确认存在 Bug、且具备可信验证条件的任务，可以定义：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>Verified Repair Rate</mtext><mo>=</mo><mfrac><mtext>通过规定修复验收的任务数</mtext><mtext>符合该评测定义的全部任务数</mtext></mfrac></mrow><annotation encoding="application/x-tex"> \text{Verified Repair Rate} =\frac{\text{通过规定修复验收的任务数}}{\text{符合该评测定义的全部任务数}} </annotation></semantics></math></span></p>
+<p>例如，100 个有效 Bug 任务中，有 68 个被成功修复且通过独立验证。</p>
+<p>那么：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>V</mi><mi>R</mi><mi>R</mi><mo>=</mo><mn>68</mn><mspace linebreak="newline"></mspace></mrow><annotation encoding="application/x-tex"> VRR=68\\% </annotation></semantics></math></span></p>
+<p>但陈工提醒：</p>
+<p>“这里必须说明什么叫有效任务。”</p>
+<p>“如果因为环境失败，就把最难的 20 个任务从分母中删除，数字可能会明显变好。”</p>
+<p>“所以应同时报告原始任务总量、有效任务数、环境阻塞数和完整端到端结果。”</p>
+<p>此外，用户的 Coding Agent 还负责判断 Bug 是否存在。</p>
+<p>这意味着：</p>
+<p>Bug 验证能力与 Bug 修复能力，应分别评测，再评测整体流程。</p>
+<h2 id="swe-benchai">第三幕：SWE-bench——AI 程序员的考试</h2>
+<p>周总突然问：</p>
+<p>“业界有没有专门评测 Coding Agent 的基准？”</p>
+<p>林川回答：</p>
+<p>“SWE-bench。”</p>
+<p>陈工点头。</p>
+<p>“对。理解 SWE-bench，有助于我们设计自己的内部评测体系。”</p>
+<h3 id="swe-bench">SWE-bench 是什么？</h3>
+<p>SWE-bench 的核心思想，是从真实 GitHub 项目中提取软件工程问题，让模型或 Agent 根据 Issue 描述与特定历史版本的代码仓库生成补丁，再通过测试判断是否解决问题。</p>
+<p>原始 SWE-bench 包含 2,294 个真实软件工程任务；SWE-bench Lite 是 300 个任务的子集；SWE-bench Verified 则是经过人工筛选的 500 个任务。</p>
+<p><a href="https://www.google.com/s2/favicons?domain=https://github.com\&amp;sz=32">image</a></p>
+<p>GitHub+1</p>
+<p>陈工在白板上画出了它的基本流程。</p>
+<p>SWE-bench 的核心评测思路</p>
+<p>真实 GitHub Issue</p>
+<p>例如：某个功能在特定输入下抛出异常</p>
+<p>Checkout 历史 Base Commit</p>
+<p>恢复到原始修复发生之前的代码</p>
+<p>Agent 阅读问题、定位代码并生成 Patch</p>
+<p>隔离评测环境应用候选 Patch</p>
+<p>运行独立测试，判断是否解决任务</p>
+<p>关注缺陷测试与回归测试结果</p>
+<p>“这里最重要的设计是什么？”陈工问。</p>
+<p>林川回答：</p>
+<p>“把修复前的代码交给 Agent，而不是已经修好的代码。”</p>
+<p>“还有呢？”</p>
+<p>“验证测试要独立于 Agent 的修改过程。”</p>
+<p>“正确。”</p>
+<p>在 SWE-bench 的典型评测中，FAIL_TO_PASS 测试用于检查原始缺陷是否被解决，PASS_TO_PASS 测试用于检查既有正确行为是否被破坏。</p>
+<p><a href="https://www.google.com/s2/favicons?domain=https://openai.com\&amp;sz=32">image</a></p>
+<p>OpenAI</p>
+<h3 id="swe-bench_1">但 SWE-bench 也不是完美的</h3>
+<p>陈工突然把白板上的“Verified”圈了起来。</p>
+<p>“你是不是以为名字叫 Verified，就说明所有任务绝对正确？”</p>
+<p>林川回答：</p>
+<p>“应该也有问题吧？”</p>
+<p>“确实如此。”</p>
+<p>2026 年 2 月，OpenAI 公布了对 SWE-bench Verified 的审查，指出数据污染、测试过严或需求描述不足等问题已削弱其评测价值，并宣布停止用该基准报告自身模型的编码能力。</p>
+<p><a href="https://www.google.com/s2/favicons?domain=https://openai.com\&amp;sz=32">image</a></p>
+<p>OpenAI</p>
+<p>而在 2026 年 7 月，OpenAI 进一步公布了对 SWE-bench Pro 的审查，指出其审查样本中也存在相当比例的问题，例如测试过度严格、需求说明不足以及测试覆盖不够。</p>
+<p><a href="https://www.google.com/s2/favicons?domain=https://openai.com\&amp;sz=32">image</a></p>
+<p>OpenAI</p>
+<p>陈工看着林川。</p>
+<p>“你看，连业界公开基准都可能存在问题。”</p>
+<p>“所以真正成熟的工程团队，不只是研究怎么提高 Benchmark 分数。”</p>
+<p>“还要研究 Benchmark 本身是否可靠。”</p>
+<h2 id="golden-dataset">第四幕：Golden Dataset——建立自己的标准题库</h2>
+<p>当天晚上。</p>
+<p>林川决定为公司内部 Coding Agent 建立一套评测数据集。</p>
+<p>陈工给了他一个任务：</p>
+<p>“先收集一百个真实 Bug。”</p>
+<p>林川问：</p>
+<p>“直接把历史 Issue 和修复 PR 拿过来就行吗？”</p>
+<p>“不够。”</p>
+<p>“每一条样本至少需要回答：问题是什么、原始版本是什么、正确行为是什么、怎么验证，以及评测环境是什么。”</p>
+<p>他设计了一种数据结构：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;caseId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BUG-2026-001&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;repository&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order-service&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;baseCommit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a1b2c3d&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;language&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Java&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;framework&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Spring Boot&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;bugDescription&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;重复提交订单可能产生重复订单&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;category&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CONCURRENCY&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;difficulty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MEDIUM&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;groundTruth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bugExists&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;rootCauseFiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="s2">&quot;OrderService.java&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="s2">&quot;OrderRepository.java&quot;</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;evaluation&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;reproductionTestId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test-001&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;regressionSuiteId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;suite-001&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>陈工提醒：</p>
+<p>“真实评测平台不应仅依赖这一份 JSON；隐藏测试、依赖镜像、业务规则、标注记录和执行环境等都需要有受保护的独立存储。”</p>
+<h3 id="bug">为什么要收集不存在 Bug 的任务？</h3>
+<p>林川回答：</p>
+<p>“因为我们的 Agent 不只是修复 Bug，还需要判断 Bug 是否存在。”</p>
+<p>“正是如此。”</p>
+<p>如果一百道题全部确实存在 Bug，模型只要每次都输出“有 Bug”，验证准确率就可能看起来很好。</p>
+<p>这会形成严重的评测偏差。</p>
+<p>因此，他们设计了几种任务类型。</p>
+<p>内部 Golden Dataset 示例组成</p>
+<p>已确认 Bug</p>
+<p>条件性或间歇性 Bug</p>
+<p>环境阻塞/信息不足</p>
+<p>确认无该缺陷</p>
+<p>示例数据集设计比例，不代表真实业务分布</p>
+<p>实际评测需要独立报告不同任务类型的表现，不能将“信息不足”机械地当作 Bug 不存在。</p>
+<p>陈工说道：</p>
+<p>“对于确认无 Bug 的样本，Agent 应该避免无依据修复。”</p>
+<p>“对于环境阻塞的样本，Agent 应该正确识别阻塞条件。”</p>
+<p>“对于间歇性 Bug，Agent 应该说明其证据和验证范围。”</p>
+<p>林川发现：</p>
+<p>优秀的 Coding Agent，除了会修复，还必须学会合理地不修改代码。</p>
+<h2 id="_4">第五幕：训练集、开发集、测试集——为什么越调越容易过拟合？</h2>
+<p>第二天上午。</p>
+<p>林川拿出了新的 Prompt。</p>
+<p>他发现，只要不断根据之前失败的题目调整 System Prompt，成功率就能提高。</p>
+<p>从 60% 到 65%。</p>
+<p>又到 71%。</p>
+<p>最终到 78%。</p>
+<p>林川说道：</p>
+<p>“看来优化效果很好。”</p>
+<p>陈工问：</p>
+<p>“你每次修改 Prompt 后，运行的是不是同一百道题？”</p>
+<p>“是。”</p>
+<p>“那这一百道题还算真正独立的测试集吗？”</p>
+<p>林川愣住了。</p>
+<p>陈工解释：</p>
+<p>“当你反复根据同一批题目的表现调整 Prompt，它们事实上已经参与了开发决策。”</p>
+<p>“即使没有用它们做模型梯度训练，也会产生测试集过拟合。”</p>
+<p>他把数据集划分成三个部分。</p>
+<p>数据集划分示意</p>
+<p>60% Dev</p>
+<p>20% Validation</p>
+<p>20% Test</p>
+<p>Dev：用于分析失败案例、调试 Prompt 和工具。</p>
+<p>Validation：用于比较候选方案、选择配置。</p>
+<p>Test：在方案冻结后用于最终独立评估。</p>
+<p>比例为示例，不是强制标准。对于深度学习中的“训练集”，这里的 Dev 更多指 Agent 工程开发数据；若训练模型权重，还需要明确训练集划分。</p>
+<p>陈工补充：</p>
+<p>“随机按 Bug 划分也可能泄漏。”</p>
+<p>“为什么？”林川问。</p>
+<p>“假设同一个 Git 仓库里有十个非常相似的 Bug。”</p>
+<p>“如果其中八个放在开发集，两个放在测试集，Agent 可能已经通过前八道题学到了大量仓库特定信息。”</p>
+<p>“所以，必要时还需要按仓库、时间、问题族进行分组划分。”</p>
+<p>他提出了更加严格的评测方案：</p>
+<ul>
+<li>开发集：允许反复调参。</li>
+<li>验证集：有限次数用于模型与策略选择。</li>
+<li>冻结测试集：最终评估前不能用于指导优化。</li>
+<li>新时间窗口数据：模拟将来真正遇到的新 Bug。</li>
+<li>新仓库数据：测试跨项目泛化能力。</li>
+</ul>
+<p>陈工说道：</p>
+<p>“如果你想证明 Agent 真正具备独立解决陌生问题的能力，最后两种尤其重要。”</p>
+<h2 id="pass1-passk">第六幕：Pass@1 与 Pass@K——一次修好和试十次修好一样吗？</h2>
+<p>上午十一点。</p>
+<p>林川正在检查另一张报表。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Agent A:
+  100 个 Bug
+  每个 Bug 最多尝试 1 次
+  成功 55 个
+
+Agent B:
+  100 个 Bug
+  每个 Bug 最多尝试 10 次
+  至少成功过 80 个
+</code></pre></div></div>
+
+<p>林川说道：</p>
+<p>“Agent B 的能力明显更强。”</p>
+<p>陈工问：</p>
+<p>“如果用户只允许提交一次修复呢？”</p>
+<p>“那就不能直接比较 80% 和 55%。”</p>
+<p>“如果 Agent B 每个任务消耗十倍 Token 和计算资源呢？”</p>
+<p>“还要考虑成本。”</p>
+<p>“所以不同的成功率，必须对应不同的执行预算。”</p>
+<h3 id="pass1">Pass@1</h3>
+<p>在这里，我们先采用一个易理解的操作性定义：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mi>a</mi><mi>s</mi><mi>s</mi><mi mathvariant="normal">@</mi><mn>1</mn><mo>=</mo><mfrac><mtext>单次候选成功的任务数</mtext><mtext>全部有效评测任务数</mtext></mfrac></mrow><annotation encoding="application/x-tex"> Pass@1=\frac{\text{单次候选成功的任务数}}{\text{全部有效评测任务数}} </annotation></semantics></math></span></p>
+<p>它衡量每个任务只允许一次候选修复时的表现。</p>
+<h3 id="passk">Pass@K</h3>
+<p>Pass@K 则关注每个任务允许生成 <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math></span> 个候选时，是否至少有一个成功。</p>
+<p>但这里有两个容易混淆的问题。</p>
+<p>第一，多个候选是彼此独立采样，还是一次 Agent Loop 中连续修复？</p>
+<p>第二，系统是否有权使用验证结果从多个候选中选出成功补丁？</p>
+<p>陈工说道：</p>
+<p>“传统代码生成评测中的 Pass@K，通常关注多个候选中是否存在正确答案。”</p>
+<p>“但企业级 Coding Agent 的用户最终只会收到一个选定补丁。”</p>
+<p>“所以 Pass@K 不能直接当成实际交付成功率。”</p>
+<p>如果对一道题独立采样 <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span> 个候选，其中 <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math></span> 个通过测试，经典的无偏 Pass@K 估计量是：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mover accent="true"><mrow><mi>P</mi><mi>a</mi><mi>s</mi><mi>s</mi><mi mathvariant="normal">@</mi><mi>K</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mrow><mo fence="true">(</mo><mfrac linethickness="0px"><mrow><mi>n</mi><mo>−</mo><mi>c</mi></mrow><mi>K</mi></mfrac><mo fence="true">)</mo></mrow><mrow><mo fence="true">(</mo><mfrac linethickness="0px"><mi>n</mi><mi>K</mi></mfrac><mo fence="true">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex"> \widehat{Pass@K} =1-\frac{\binom{n-c}{K}}{\binom{n}{K}} </annotation></semantics></math></span></p>
+<p>其中 <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>≥</mo><mi>K</mi></mrow><annotation encoding="application/x-tex">n \ge K</annotation></semantics></math></span>，当 <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">n-c</annotation></semantics></math></span> 小于 <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math></span> 时，失败候选不足以组成一个全失败样本，估计值为 1。</p>
+<p>林川问：</p>
+<p>“这个公式怎么理解？”</p>
+<p>陈工解释：</p>
+<p>“它是在计算：从这些候选中随机抽取 K 个，至少抽到一个成功候选的概率。”</p>
+<p>“而不是简单地把 K 次运行的平均成功率当成 Pass@K。”</p>
+<h3 id="_5">交互式模拟</h3>
+<p>Pass@K 概念模拟器</p>
+<p>生成候选数量 n</p>
+<p>10</p>
+<p>成功候选数量 c</p>
+<p>3</p>
+<p>随机抽取 K 个</p>
+<p>2</p>
+<p>Pass@2 估计值</p>
+<h3 id="533">53.3%</h3>
+<p>抽取的 2 个候选中至少包含一个成功结果的概率估计</p>
+<p>假设各候选按照预先定义的采样方式生成。此演示不衡量选择器是否能找到正确补丁，也不代表多轮修复过程的真实成功率。</p>
+<p>陈工最后说道：</p>
+<p>“企业实际评测最好同时报告 Single-attempt Success、Best-of-K Success 和最终交付成功率。”</p>
+<p>“不要通过增加重试次数，就声称基础模型变聪明了。”</p>
+<h2 id="_6">第七幕：一个绿色的测试，可能掩盖一个错误的修复</h2>
+<p>下午两点。</p>
+<p>评测平台发现一个奇怪的现象。</p>
+<p>某个 Bug 的测试全部通过。</p>
+<p>但负责审核的工程师却拒绝了补丁。</p>
+<p>林川打开原始问题。</p>
+<blockquote>
+<p>用户取消订单后，应释放此前预占的库存。</p>
+</blockquote>
+<p>原始代码没有释放库存。</p>
+<p>Agent 给出了修复：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">cancelOrder</span><span class="p">(</span><span class="n">Long</span><span class="w"> </span><span class="n">orderId</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">orderRepository</span><span class="p">.</span><span class="na">deleteById</span><span class="p">(</span><span class="n">orderId</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>测试显示成功。</p>
+<p>但林川越看越觉得不对。</p>
+<p>“它只是删除了订单，没有释放库存。”</p>
+<p>陈工问：</p>
+<p>“那为什么测试通过？”</p>
+<p>林川打开验收测试。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="nd">@Test</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">shouldCancelOrder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">service</span><span class="p">.</span><span class="na">cancelOrder</span><span class="p">(</span><span class="mi">1L</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">assertFalse</span><span class="p">(</span>
+<span class="w">        </span><span class="n">orderRepository</span><span class="p">.</span><span class="na">existsById</span><span class="p">(</span><span class="mi">1L</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>他突然明白了。</p>
+<p>“测试只检查订单是否被删除，完全没有检查库存。”</p>
+<p>“没错。”</p>
+<p>“这不是模型成功修复，而是评测条件没有覆盖完整需求。”</p>
+<h3 id="_7">测试覆盖与业务正确性并不等价</h3>
+<p>陈工写下：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>Tests Passed</mtext><mo>⇏</mo><mtext>Correct Fix</mtext></mrow><annotation encoding="application/x-tex"> \text{Tests Passed}\not\Rightarrow\text{Correct Fix} </annotation></semantics></math></span></p>
+<p>反过来也可能出现问题。</p>
+<p>某些测试对具体实现细节要求过严，导致功能正确的替代实现被错误拒绝。</p>
+<p>因此，评测可能存在两种方向的错误：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>表现</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>测试过宽或覆盖不足</td>
+<td>错误补丁也能通过</td>
+<td>高估 Agent 能力</td>
+</tr>
+<tr>
+<td>测试过窄或过度指定实现</td>
+<td>正确补丁也无法通过</td>
+<td>低估 Agent 能力</td>
+</tr>
+</tbody>
+</table>
+<p>“这也是公开 Coding Agent 基准不断被审查和改进的原因之一。”</p>
+<p>陈工说道。</p>
+<p>“真正的 Golden Dataset，不只是要有标准答案，还要有可信的验收标准。”</p>
+<p>他要求在关键样本中加入三类验证：</p>
+<p>行为测试：业务不变量是否被满足。</p>
+<p>回归测试：此前正常的功能是否被破坏。</p>
+<p>人工审查：补丁是否在合理范围内解决了真实需求。</p>
+<p>对于高风险场景，还可能需要安全测试、并发测试、性能测试或数据一致性验证。</p>
+<h2 id="llm-as-a-judge-ai-agent">第八幕：LLM-as-a-Judge——让另一个 AI 给 Agent 打分？</h2>
+<p>林川问：</p>
+<p>“如果每个修复都需要人工审核，成本会不会太高？”</p>
+<p>陈工回答：</p>
+<p>“可以引入 LLM-as-a-Judge，但必须限定它的用途。”</p>
+<p>所谓 LLM-as-a-Judge，就是让模型根据明确的评分规则评估另一个模型或 Agent 的输出。</p>
+<p>例如，要求 Judge 分析：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Bug:
+重复订单问题。
+
+Patch:
+修改了 OrderService、OrderRepository。
+
+Test Evidence:
+复现测试与回归测试通过。
+
+Review Criteria:
+1. 是否针对根因？
+2. 是否存在无关修改？
+3. 是否引入明显并发风险？
+4. 是否存在未经验证的假设？
+</code></pre></div></div>
+
+<p>Judge 返回：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;rootCauseAlignment&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;changeScope&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;riskAssessment&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;medium&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;findings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;需要确认唯一索引的迁移兼容性&quot;</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>林川说道：</p>
+<p>“这样就可以自动给每个 Patch 打分。”</p>
+<p>陈工摇头。</p>
+<p>“可以辅助打分，但不能让这个分数代替运行时验证。”</p>
+<p>LLM Judge 容易受到以下因素影响：</p>
+<ul>
+<li>位置偏差：先展示的方案可能获得不同评价。</li>
+<li>表达偏差：描述更流畅的补丁可能被高估。</li>
+<li>共同错误：Repair Agent 与 Judge 可能做出类似的错误推断。</li>
+<li>证据不足：Judge 没看到真实数据库行为，却可能给出确定结论。</li>
+<li>评测泄漏：Judge 可能接触原始答案或隐藏信息。</li>
+</ul>
+<p>因此陈工规定：</p>
+<p>“编译是否成功，用编译器判断。”</p>
+<p>“测试是否通过，用可信测试环境判断。”</p>
+<p>“数据库一致性是否满足，用针对性的真实行为测试判断。”</p>
+<p>“LLM Judge 更适合协助分析修改合理性、定位潜在风险以及组织人工审核。”</p>
+<p>能够用确定性程序验证的事情，不应默认交给模型主观评分。</p>
+<h2 id="78-60">第九幕：统计显著性——78% 一定比 60% 好吗？</h2>
+<p>下午四点。</p>
+<p>周总再次召开验收会议。</p>
+<p>他问：</p>
+<p>“假设 Agent A 成功率 60%，Agent B 成功率 78%，我们是不是能说 B 一定更强？”</p>
+<p>林川说：</p>
+<p>“差了 18 个百分点，应该很明显吧？”</p>
+<p>周总追问：</p>
+<p>“如果只测了十个任务呢？”</p>
+<p>林川沉默。</p>
+<p>陈工解释：</p>
+<p>“有限样本存在统计波动。”</p>
+<p>“即使两个系统真实能力完全相同，在不同任务样本上也可能得到不同成功率。”</p>
+<p>“所以我们需要考虑样本量、置信区间与实验设计。”</p>
+<h3 id="_8">首先，必须做配对比较</h3>
+<p>假设测试有 100 个 Bug。</p>
+<p>不能让 A 测试一批简单 Bug，让 B 测试另一批困难 Bug。</p>
+<p>两套系统应该在同一批测试任务上运行，并尽量保持相同的环境和预算。</p>
+<p>例如：</p>
+<table>
+<thead>
+<tr>
+<th>结果组合</th>
+<th>Bug 数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A 和 B 都成功</td>
+<td>50</td>
+</tr>
+<tr>
+<td>只有 A 成功</td>
+<td>10</td>
+</tr>
+<tr>
+<td>只有 B 成功</td>
+<td>28</td>
+</tr>
+<tr>
+<td>A 和 B 都失败</td>
+<td>12</td>
+</tr>
+<tr>
+<td>合计</td>
+<td>100</td>
+</tr>
+</tbody>
+</table>
+<p>从表中可得：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>S</mi><mi>u</mi><mi>c</mi><mi>c</mi><mi>e</mi><mi>s</mi><msub><mi>s</mi><mi>A</mi></msub><mo>=</mo><mo stretchy="false">(</mo><mn>50</mn><mo>+</mo><mn>10</mn><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mn>100</mn><mo>=</mo><mn>60</mn><mspace linebreak="newline"></mspace></mrow><annotation encoding="application/x-tex"> Success_A=(50+10)/100=60\\% </annotation></semantics></math></span></p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>S</mi><mi>u</mi><mi>c</mi><mi>c</mi><mi>e</mi><mi>s</mi><msub><mi>s</mi><mi>B</mi></msub><mo>=</mo><mo stretchy="false">(</mo><mn>50</mn><mo>+</mo><mn>28</mn><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mn>100</mn><mo>=</mo><mn>78</mn><mspace linebreak="newline"></mspace></mrow><annotation encoding="application/x-tex"> Success_B=(50+28)/100=78\\% </annotation></semantics></math></span></p>
+<p>林川说道：</p>
+<p>“这里 B 独有成功 28 个，A 独有成功 10 个，所以 B 的确更占优势。”</p>
+<p>陈工回答：</p>
+<p>“对。更进一步，可以使用适用于配对二分类结果的 McNemar 检验。”</p>
+<p>它主要关注两种不一致情况：只有 A 成功，以及只有 B 成功。</p>
+<p>在这个例子里，使用连续性校正的近似统计量：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mi>χ</mi><mn>2</mn></msup><mo>=</mo><mfrac><mrow><mo stretchy="false">(</mo><mi mathvariant="normal">∣</mi><mn>28</mn><mo>−</mo><mn>10</mn><mi mathvariant="normal">∣</mi><mo>−</mo><mn>1</mn><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><mrow><mn>28</mn><mo>+</mo><mn>10</mn></mrow></mfrac><mo>≈</mo><mn>7.61</mn></mrow><annotation encoding="application/x-tex"> \chi^2=\frac{(|28-10|-1)^2}{28+10} \approx7.61 </annotation></semantics></math></span></p>
+<p>这个结果对应的近似 <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span> 值约为 0.006。</p>
+<p>“在该实验假设成立时，这提供了差异不容易仅由随机样本波动解释的证据。”</p>
+<p>“但这里的统计显著性，不等于实际业务价值一定巨大。”</p>
+<p>而且如果同一仓库内的任务高度相关，简单地把 100 个任务视为独立样本也可能低估不确定性。</p>
+<p>对于模型本身的随机性，还可以对同一任务进行多次独立运行，使用更合适的分层或聚类方法估计不确定性。</p>
+<h3 id="_9">相对提升和绝对提升不能混淆</h3>
+<p>陈工又问：</p>
+<p>“60% 到 78%，到底提升多少？”</p>
+<p>林川回答：</p>
+<p>“绝对提升 18 个百分点。”</p>
+<p>“相对提升呢？”</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mn>78</mn><mo>−</mo><mn>60</mn></mrow><mn>60</mn></mfrac><mo>=</mo><mn>30</mn><mspace linebreak="newline"></mspace></mrow><annotation encoding="application/x-tex"> \frac{78-60}{60}=30\\% </annotation></semantics></math></span></p>
+<p>“所以你可以说相对提升 30%，但必须同时报告原始值。”</p>
+<p>“只写‘提升 30%’，很容易让读者误以为提升了 30 个百分点。”</p>
+<h2 id="java">第十幕：评测平台——如何用 Java 构建自动化实验系统？</h2>
+<p>晚上七点。</p>
+<p>林川终于意识到，单纯写几个 JUnit 测试，已经不足以支撑整个 Coding Agent 的能力评估。</p>
+<p>“导师，我们是不是需要专门的评测平台？”</p>
+<p>陈工点头。</p>
+<p>“是的。”</p>
+<p>“你可以把它理解成一套实验管理与证据收集系统。”</p>
+<p>他设计了以下架构。</p>
+<p>企业级 Coding Agent 评测平台</p>
+<p>Golden Dataset Registry</p>
+<p>测试任务、仓库 Commit、验收规则、数据集版本</p>
+<p>Experiment Manager</p>
+<p>模型版本、Prompt 版本、Agent 配置与实验参数</p>
+<p>Evaluation Scheduler</p>
+<p>任务分发、配额、重试、并发与实验随机化</p>
+<p>Agent A</p>
+<p>旧版基线</p>
+<p>Agent B</p>
+<p>新版候选</p>
+<p>Independent Evaluator</p>
+<p>干净 Sandbox · 受保护测试 · 补丁策略 · 结果判定</p>
+<p>Metrics &amp; Analysis</p>
+<p>成功率 · P95 · Token 成本 · 失败归因 · 显著性分析</p>
+<p>林川问：</p>
+<p>“这里最重要的是哪个模块？”</p>
+<p>“Independent Evaluator。”</p>
+<p>陈工回答。</p>
+<p>“因为修复 Agent 与评测系统之间必须建立信任边界。”</p>
+<p>“否则 Agent 可能修改验收测试、污染评测环境，甚至获取隐藏答案。”</p>
+<h3 id="java_1">Java 数据模型怎么设计？</h3>
+<p>陈工首先定义评测任务。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">EvaluationCase</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">caseId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">repository</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">baseCommit</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">issueDescription</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">evaluationSpecId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">datasetVersion</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+</code></pre></div></div>
+
+<p>定义实验配置：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">ExperimentConfig</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">experimentId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">agentVersion</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">modelVersion</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">promptVersion</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">toolsetVersion</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">maxSteps</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">maxTokens</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">maxRepairAttempts</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+</code></pre></div></div>
+
+<p>定义运行记录：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">EvaluationRun</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">runId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">caseId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">experimentId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">patchArtifactId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">traceArtifactId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">EvaluationStatus</span><span class="w"> </span><span class="n">status</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+</code></pre></div></div>
+
+<p>其中 <code>EvaluationStatus</code> 不能只包含成功与失败。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">enum</span><span class="w"> </span><span class="n">EvaluationStatus</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="n">RESOLVED</span><span class="p">,</span>
+
+<span class="w">    </span><span class="n">UNRESOLVED</span><span class="p">,</span>
+
+<span class="w">    </span><span class="n">PATCH_INVALID</span><span class="p">,</span>
+
+<span class="w">    </span><span class="n">EVALUATION_ERROR</span><span class="p">,</span>
+
+<span class="w">    </span><span class="n">ENVIRONMENT_BLOCKED</span><span class="p">,</span>
+
+<span class="w">    </span><span class="n">POLICY_VIOLATION</span><span class="p">,</span>
+
+<span class="w">    </span><span class="n">TIMEOUT</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>陈工解释：</p>
+<p>“为什么要把 <code>EVALUATION_ERROR</code> 和 <code>UNRESOLVED</code> 分开？”</p>
+<p>林川回答：</p>
+<p>“因为前者是评测系统出问题，后者是 Agent 没有解决任务。”</p>
+<p>“没错。”</p>
+<p>“但最终汇总时，不能悄悄把评测异常全部排除。要报告每种状态的数量和预先约定的统计方式。”</p>
+<h2 id="_10">第十一幕：为什么每次实验必须冻结所有变量？</h2>
+<p>第二天。</p>
+<p>林川准备运行 A/B 实验。</p>
+<p>Agent A 使用旧版 Prompt。</p>
+<p>Agent B 使用新版 Prompt。</p>
+<p>但陈工发现：</p>
+<p>Agent A 使用模型版本 M1。</p>
+<p>Agent B 使用模型版本 M2。</p>
+<p>与此同时，B 还拥有更多工具调用次数。</p>
+<p>陈工问：</p>
+<p>“现在如果 B 表现更好，你能确定是什么原因吗？”</p>
+<p>林川回答：</p>
+<p>“不能。”</p>
+<p>“这就是实验中的混杂因素。”</p>
+<p>若希望研究某一项改进的效果，最好尽可能保持其他条件一致。</p>
+<p>例如，研究新的代码检索机制时，可以固定：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Model Version: M1
+Prompt Version: P3
+Agent Loop: V2
+Max Tool Calls: 40
+Token Budget: 120000
+Dataset: Golden-v5
+Repository Commits: Fixed
+
+Only Difference:
+Code Retrieval Strategy
+</code></pre></div></div>
+
+<p>“这样，我们才有机会把效果差异归因到检索策略变化。”</p>
+<p>陈工又提出：</p>
+<p>“如果我们需要比较两套完整 Agent 产品呢？”</p>
+<p>“那可以把整个系统视为实验变量。”</p>
+<p>“对，但此时只能得出整体系统差异，而不能声称某一个模块单独贡献了全部提升。”</p>
+<h3 id="_11">消融实验：到底是谁带来了提升？</h3>
+<p>林川设计了一个消融实验。</p>
+<p>模拟消融实验结果</p>
+<p>0%25%50%75%100%基础 Agent+ 代码检索+ 修复反馈+ 测试规划完整方案</p>
+<p>全部为虚构的教学数据。逐步叠加方案只能展示特定加入顺序下的条件收益，不能独立证明每个模块的普遍因果贡献。</p>
+<p>陈工说：</p>
+<p>“如果想知道 Code RAG 是否真的有必要，就在相同条件下比较开启和关闭它的表现。”</p>
+<p>“如果加入多 Agent 架构，修复率只增加一点点，但 Token 成本翻了三倍，那它未必值得部署。”</p>
+<p>林川终于意识到：</p>
+<p>架构复杂度本身不是成绩。只有经过证据验证的实际收益，才值得用额外复杂度去交换。</p>
+<h2 id="_12">第十二幕：成本、延迟与修复质量——不存在免费的智能</h2>
+<p>周总再次来到实验室。</p>
+<p>“假设新版 Agent 成功率提高了，但运行成本也增加了一倍，值不值得？”</p>
+<p>林川回答：</p>
+<p>“需要具体分析。”</p>
+<p>周总点头。</p>
+<p>“这次回答对了。”</p>
+<p>陈工给出三个实验方案。</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>Verified Repair Rate</th>
+<th>单任务平均成本</th>
+<th>P95 耗时</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Agent A</td>
+<td>60%</td>
+<td>¥0.8</td>
+<td>90 秒</td>
+</tr>
+<tr>
+<td>Agent B</td>
+<td>70%</td>
+<td>¥2.0</td>
+<td>180 秒</td>
+</tr>
+<tr>
+<td>Agent C</td>
+<td>72%</td>
+<td>¥5.0</td>
+<td>420 秒</td>
+</tr>
+</tbody>
+</table>
+<p>所有数字均为示例，不代表实际模型价格或你的项目数据。</p>
+<p>林川问：</p>
+<p>“如果只是看修复率，Agent C 最好。”</p>
+<p>“但它相对于 B 只提高了两个百分点，成本却增加了很多。”</p>
+<p>陈工回答：</p>
+<p>“所以模型路由与 Agent 策略需要考虑任务价值。”</p>
+<p>例如：</p>
+<p>简单的编译错误，可以交给成本较低的执行方案。</p>
+<p>复杂的跨模块并发 Bug，可以使用更强的模型、更多工具调用和更严格的验证。</p>
+<p>但陈工进一步强调：</p>
+<p>“对高风险代码，不能仅以低成本为目标。”</p>
+<p>“例如支付、认证、安全权限和数据迁移，错误修复的代价可能远远大于模型推理成本。”</p>
+<p>因此，实际平台可以设计：</p>
+<p><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>U</mi><mo>=</mo><mtext>预期修复收益</mtext><mo>−</mo><mtext>执行成本</mtext><mo>−</mo><mtext>潜在风险成本</mtext></mrow><annotation encoding="application/x-tex"> U=\text{预期修复收益}-\text{执行成本}-\text{潜在风险成本} </annotation></semantics></math></span></p>
+<p>“这只是辅助决策的概念表达式。”</p>
+<p>“真实的风险和业务价值不一定能准确换算成单一金额，因此通常还需要硬性的安全与审批约束。”</p>
+<h2 id="30">第十三幕：失败归因——为什么 30% 的任务没有修好？</h2>
+<p>下午五点。</p>
+<p>评测平台终于产生了一份完整的失败报告。</p>
+<p>这一次，林川没有只盯着修复率。</p>
+<p>他开始分析每个失败任务在哪个阶段出错。</p>
+<p>100 个评测任务的模拟结果</p>
+<p>020406080修复成功代码定位错误Bug 验证失败Patch 错误测试环境问题资源超限</p>
+<p>为方便解释，示例中每个任务只分配一个主要结果或失败原因。真实系统可能存在多个相互关联的失败因素。</p>
+<p>林川说道：</p>
+<p>“原来不能把所有失败都归因于模型不够聪明。”</p>
+<p>陈工回答：</p>
+<p>“对。”</p>
+<p>“如果失败主要集中在代码定位阶段，应该优先优化检索系统。”</p>
+<p>“如果集中在 Patch 生成阶段，可以研究上下文质量、多轮反馈和代码修改策略。”</p>
+<p>“如果大量失败来自环境构建，则应优先改善 Sandbox、依赖缓存和环境复现。”</p>
+<p>“如果 Agent 明明修复正确，却因错误测试被拒绝，那应该修复评测数据集。”</p>
+<p>他总结出一个非常重要的原则：</p>
+<p>评测不只是为了给系统打分，更是为了识别下一轮工程优化的方向。</p>
+<h2 id="bug_1">第十四幕：真正的验收——一批从未见过的新 Bug</h2>
+<p>第三周。</p>
+<p>技术负责人周总再次走进会议室。</p>
+<p>“这次我们不使用你们调试过的一百道题。”</p>
+<p>他拿出了一份新的数据集。</p>
+<p>“里面的仓库，你们的开发人员没有提前分析过。”</p>
+<p>“Bug 是近期真实发生的。”</p>
+<p>“评测标准已由另一组工程师审核。”</p>
+<p>“模型和 Prompt 配置在实验开始前冻结。”</p>
+<p>“每个任务都有明确的时间、Token 和工具调用预算。”</p>
+<p>林川深吸了一口气。</p>
+<p>这一次，Agent 不再拥有反复记住题目的机会。</p>
+<p>实验开始。</p>
+<p>数小时后，系统输出模拟结果。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Experiment: HOLDOUT-2026-01
+
+Dataset:
+  New repositories
+  Unseen bug reports
+  Frozen evaluation specification
+
+Agent A:
+  Verified Repair Rate: 58%
+
+Agent B:
+  Verified Repair Rate: 66%
+
+Difference:
+  +8 percentage points
+
+Additional checks:
+  Regression failures: reported separately
+  Evaluation errors: reported separately
+  Token cost: reported separately
+  Confidence interval: pending analysis
+</code></pre></div></div>
+
+<p>林川看着结果。</p>
+<p>“从原来的 18 个百分点，变成了 8 个百分点。”</p>
+<p>陈工点头。</p>
+<p>“这说明我们之前观察到的提升，可能有一部分来自对开发数据的适应。”</p>
+<p>“当然，仅凭这一次实验，还不能精确确定过拟合贡献有多少。”</p>
+<p>“还需要检查新旧数据的任务难度、仓库分布和评测条件是否可比。”</p>
+<p>林川问：</p>
+<p>“那现在这份数据是不是更值得相信？”</p>
+<p>“如果评测设计和数据隔离确实落实了，它对陌生任务的泛化能力具有更强的参考价值。”</p>
+<p>“但依然需要持续验证。”</p>
+<h2 id="coding-agent">第十五幕：终极面试——如何证明你的 Coding Agent 真有工程价值？</h2>
+<p>陈工最后组织了一场模拟面试。</p>
+<p>十道 Coding Agent 评测深挖题</p>
+<p>展开全部</p>
+<p>1Coding Agent 的修复成功率应该怎么定义？</p>
+<p>明确评测任务集合、验收规则和统计分母。对于确认有 Bug 的任务，使用独立测试和必要审核判断是否成功修复，同时单独报告无法运行、超时和评测环境失败的任务。</p>
+<p>2SWE-bench 主要评测什么？</p>
+<p>3Pass@1 与 Pass@K 有什么区别？</p>
+<p>4如何防止 Coding Agent 评测过拟合？</p>
+<p>5为什么所有测试通过也不一定代表正确修复？</p>
+<p>6LLM-as-a-Judge 能不能替代测试？</p>
+<p>7如何证明新版 Agent 比旧版更好？</p>
+<p>8为什么还要对失败任务进行分类？</p>
+<p>9如何建设企业内部 Golden Dataset？</p>
+<p>10如果修复率提升 10%，但成本翻倍，应该上线吗？</p>
+<p>陈工看着林川。</p>
+<p>“如果你以后在面试中说，自己的 Coding Agent 修复成功率提高了多少，面试官可能马上追问这个数字是怎么来的。”</p>
+<p>“如果是你真实测量的，就说明数据集、样本量、基线、验证方法与统计口径。”</p>
+<p>“如果是项目的目标指标，而非已经完成的实验，就明确说它是目标。”</p>
+<p>“如果没有做过正式评测，就不要编造成功率。”</p>
+<p>“你可以讲清楚如何建立评测体系，以及你实际完成了哪些工作。”</p>
+<p>林川点头。</p>
+<h2 id="_13">尾声：真正的工程能力，需要接受审判</h2>
+<p>夜晚十一点。</p>
+<p>林川独自坐在研发中心。</p>
+<p>他再次打开第一章的 Coding Agent 页面。</p>
+<p>用户仍然只需要输入三个信息：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>项目 URL
+项目名称
+Bug 描述
+</code></pre></div></div>
+
+<p>系统仍然会执行熟悉的流程：</p>
+<p>代码检索、Bug 验证、补丁生成和测试。</p>
+<p>但此刻，他看待这个项目的方式已经发生了变化。</p>
+<p>从前，他认为一个 Coding Agent 的价值在于：</p>
+<p>“它能够自动修复 Bug。”</p>
+<p>后来，他意识到，系统还需要拥有安全的工具执行环境、任务调度与故障恢复能力。</p>
+<p>现在，他终于理解了最后一块拼图。</p>
+<p>即使 Agent 能够运行、能够生成补丁、能够通过测试，也必须有可靠的评测体系，才能判断它是否真的解决了用户的问题。</p>
+<p>陈工走进办公室。</p>
+<p>“林川，你觉得我们还能继续优化这个 Agent 吗？”</p>
+<p>“当然。”</p>
+<p>“下一步优化什么？”</p>
+<p>林川想了想。</p>
+<p>“先看失败归因。”</p>
+<p>“如果是检索问题，就优化检索。”</p>
+<p>“如果是验证问题，就优化测试规划。”</p>
+<p>“如果是模型推理问题，就考虑模型或 Prompt。”</p>
+<p>“如果是环境问题，就完善 Sandbox。”</p>
+<p>“如果只是指标好看，却没有泛化收益，就不应该把它当作真正的进步。”</p>
+<p>陈工点了点头。</p>
+<p>“现在你终于从一个会构建 AI 功能的开发者，开始转向一个能够验证 AI 系统价值的工程师了。”</p>
+<h2 id="_14">第八章知识复盘</h2>
+<table>
+<thead>
+<tr>
+<th>核心技术</th>
+<th>作用</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SWE-bench</td>
+<td>理解真实软件工程任务的评测方式</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Golden Dataset</td>
+<td>构建可信、可复现的内部测试集</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Verified Repair Rate</td>
+<td>衡量经过验证的修复结果</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Pass@1 / Pass@K</td>
+<td>区分单次与多候选成功能力</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>数据污染与过拟合</td>
+<td>防止测试结果虚高</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FAIL_TO_PASS / PASS_TO_PASS</td>
+<td>验证修复与回归行为</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>LLM-as-a-Judge</td>
+<td>辅助补丁质量评估</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A/B 与消融实验</td>
+<td>识别系统改进的真实收益</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>统计显著性</td>
+<td>判断性能差异是否有充分统计证据</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>失败归因</td>
+<td>找到系统最值得优化的瓶颈</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>成本与延迟</td>
+<td>评估改进的实际工程代价</td>
+<td>P0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_15">下一章：《终极面试——从实习项目到真正的工程体系》</h3>
+<p>经过八章，林川已经从零开始经历了企业级 Coding Agent 的完整生命周期。</p>
+<p>但下一章，他将面对一个新的挑战。</p>
+<p>一家大型 AI 公司的高级技术面试官问：</p>
+<blockquote>
+<p>“你这个项目听起来就是一个接入大模型的自动化代码修复工具。”</p>
+<p>“整个系统究竟有哪些部分是你自己设计和实现的？”</p>
+<p>“为什么要使用 Agent，而不是固定工作流？”</p>
+<p>“你在项目里真正遇到过什么工程问题？”</p>
+<p>“你说它可以验证 Bug，具体如何证明？”</p>
+<p>“如果不给你任何 Agent 框架，只给你 Java、Spring Boot 和一个大模型 API，你能不能自己从零实现？”</p>
+<p>“如果给你一百台机器和十万个 Bug，你又会怎么设计？”</p>
+</blockquote>
+<p>第九章，我们将把前八章所有知识重新串联，深入到系统设计、Java 核心代码、真实面试追问、工程边界和项目表达。</p>
+<p>这一次，林川不再只是学习如何构建 Coding Agent。</p>
+<p>他要证明自己真正理解了这个系统。</p></article><section class="chapter-extras"><h2>把这一章放进实验</h2><section class="lab" data-lab="eval" aria-label="一次成功与多次尝试"><div class="lab-heading"><p class="eyebrow">LOCAL EXPERIMENT</p><h2>一次成功与多次尝试</h2><p>浏览器内的教学模拟，数据与结果均非真实平台测量。</p></div><div class="lab-body"></div></section><a class="text-link" href="practice.html">全部七个交互实验 →</a></section><section class="quiz" data-quiz="8" aria-label="第8章练习"><h2>章末练习</h2><p>三道题，检查你是否理解了工程取舍。</p><div class="quiz-body"></div></section><nav class="chapter-nav" aria-label="上下章"><a href="chapter-07.html">← 上一章</a><a href="chapter-09.html">下一章 →</a></nav></main></div><footer><a href="index.html">Agent 帝国：代码审判者</a> · 第一卷完 · 九章<br><a href="practice.html">交互实验</a> · <a href="reading.html">我的阅读</a> · <a href="editorial.html">内容说明与来源</a> · <a href="https://github.com/wupzl/coding-agent-reader">项目源码 ↗</a><br><small>小说式工程学习 · 无需登录 · 记录保存在当前浏览器</small></footer>
+<dialog id="search-dialog" aria-labelledby="search-title"><div class="dialog-heading"><h2 id="search-title">搜索全书</h2><button id="search-close" aria-label="关闭搜索">×</button></div><label for="query">关键词或代码，例如 幂等、Tool Registry、SSRF</label><input id="query" type="search" placeholder="搜索九章正文…" autocomplete="off"><p id="search-status" role="status">输入关键词开始搜索</p><div id="search-results"></div></dialog><div id="toast" role="status" aria-live="polite"></div></body></html>

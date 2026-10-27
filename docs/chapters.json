@@ -1,0 +1,83 @@
+[
+  {
+    "number": 1,
+    "title": "一条 URL 引发的代码战争",
+    "topics": "整体架构 · 异步任务 · 从证据到补丁",
+    "note_title": "证据优先的修复链路",
+    "note": "本章的接口、订单代码和运行报告是教学示例，不能直接作为生产实现或真实项目成绩。数据库唯一约束应匹配业务幂等域；重复键异常的恢复读取需要在失败事务结束后执行。",
+    "minutes": 19,
+    "url": "chapter-01.html"
+  },
+  {
+    "number": 2,
+    "title": "智能体的大脑——Agent Loop 与工具调用",
+    "topics": "ReAct · 工具调用 · 状态机与上下文",
+    "note_title": "把模型输出视为行动提议",
+    "note": "模型提出工具调用，由 Runtime 校验名称、参数和授权后执行。示例中的循环应配合时间、Token 和工具次数预算；文本中的推理步骤是教学化决策摘要，并不意味着需要展示模型内部推理。",
+    "minutes": 23,
+    "url": "chapter-02.html"
+  },
+  {
+    "number": 3,
+    "title": "百万行代码迷宫——Agent 如何找到真正的 Bug？",
+    "topics": "关键词 · AST / LSP · Code RAG",
+    "note_title": "检索结果还不是根因",
+    "note": "关键词、AST、LSP、调用图与向量检索提供不同线索。调用关系可能受反射、动态分派和跨服务通信影响；必须结合运行证据验证候选根因。",
+    "minutes": 25,
+    "url": "chapter-03.html"
+  },
+  {
+    "number": 4,
+    "title": "Bug 审判庭——如何证明一个 Bug 真的存在？",
+    "topics": "最小复现 · JUnit · 独立验证",
+    "note_title": "测试证据有适用范围",
+    "note": "一次复现失败不能证明缺陷不存在；Mock 测试不能替代真实数据库和事务验证。修复前失败、修复后通过的同一用例应由独立验证流程保存和重跑。",
+    "minutes": 26,
+    "url": "chapter-04.html"
+  },
+  {
+    "number": 5,
+    "title": "代码外科医生——AI 如何安全地修改百万行代码？",
+    "topics": "Git Diff · 幂等性 · 最小变更",
+    "note_title": "最小补丁与明确事务边界",
+    "note": "本章 Java、SQL 和 Patch Guard 代码展示设计思路。真实实现还要检查路径穿越和符号链接、旧数据迁移、同请求 ID 的参数冲突、事务提交后的可见性及补偿策略。",
+    "minutes": 23,
+    "url": "chapter-05.html"
+  },
+  {
+    "number": 6,
+    "title": "云端战争——一千个 Coding Agent 同时觉醒",
+    "topics": "消息队列 · Worker · 限流与可观测性",
+    "note_title": "并发受最紧张的资源约束",
+    "note": "Java 21 虚拟线程适合大量等待 I/O 的任务，并不会增加数据库连接、模型配额或 CPU。Sandbox 资源应独立计费与限额；本章监控数字均为故事中的假设数据。",
+    "minutes": 36,
+    "url": "chapter-06.html"
+  },
+  {
+    "number": 7,
+    "title": "安全与失控——当 Agent 获得执行权限",
+    "topics": "提示注入 · 沙箱 · 权限与审计",
+    "note_title": "容器配置只是多层防线之一",
+    "note": "仓库文档、构建脚本和工具返回都可能包含不可信输入。Pod Security 的 Restricted 配置可收紧权限，但不能单独证明可安全执行任意恶意代码；还要考虑网络、凭证、内核隔离与审计。",
+    "minutes": 23,
+    "url": "chapter-07.html"
+  },
+  {
+    "number": 8,
+    "title": "评测法庭——如何证明 Coding Agent 真的变聪明了？",
+    "topics": "SWE-bench · Pass@K · 配对评测",
+    "note_title": "评测结论必须附带实验条件",
+    "note": "SWE-bench 通过代码库、问题和补丁评估软件问题解决能力。Pass@K 应说明采样和预算；同一任务集比较应保留逐题配对结果，并同时报告样本量、成本和不确定性。",
+    "minutes": 33,
+    "url": "chapter-08.html"
+  },
+  {
+    "number": 9,
+    "title": "终极面试——从实习项目到真正的工程体系",
+    "topics": "工程取舍 · 实习复盘 · 面试表达",
+    "note_title": "分清故事示例与个人经历",
+    "note": "林川的叙事与本书的代码属于教学案例。面试表达应以自己的真实职责、代码、证据和可核实指标为准；第二卷在本项目中仅保留原文预告。",
+    "minutes": 23,
+    "url": "chapter-09.html"
+  }
+]

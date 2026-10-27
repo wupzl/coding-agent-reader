@@ -1,0 +1,58 @@
+[
+  {
+    "chapter": 1,
+    "characters": 11637,
+    "code_blocks": 15,
+    "removed_chart_artifacts": []
+  },
+  {
+    "chapter": 2,
+    "characters": 17244,
+    "code_blocks": 27,
+    "removed_chart_artifacts": []
+  },
+  {
+    "chapter": 3,
+    "characters": 17210,
+    "code_blocks": 30,
+    "removed_chart_artifacts": []
+  },
+  {
+    "chapter": 4,
+    "characters": 17757,
+    "code_blocks": 25,
+    "removed_chart_artifacts": []
+  },
+  {
+    "chapter": 5,
+    "characters": 18276,
+    "code_blocks": 37,
+    "removed_chart_artifacts": []
+  },
+  {
+    "chapter": 6,
+    "characters": 22899,
+    "code_blocks": 32,
+    "removed_chart_artifacts": [
+      "0250500750100010:0010:0110:0210:0310:0410:05"
+    ]
+  },
+  {
+    "chapter": 7,
+    "characters": 14209,
+    "code_blocks": 14,
+    "removed_chart_artifacts": []
+  },
+  {
+    "chapter": 8,
+    "characters": 17462,
+    "code_blocks": 13,
+    "removed_chart_artifacts": []
+  },
+  {
+    "chapter": 9,
+    "characters": 12693,
+    "code_blocks": 7,
+    "removed_chart_artifacts": []
+  }
+]

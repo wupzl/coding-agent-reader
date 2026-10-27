@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="description" content="Agent 帝国：代码审判者。九章小说式 Coding Agent 工程阅读，含本地交互实验与章末练习。"><title>代码外科医生——AI 如何安全地修改百万行代码？ · Agent 帝国</title><script>try{document.documentElement.dataset.theme=localStorage.getItem('coding-agent-theme')||'white';document.documentElement.style.setProperty('--reading-size',Math.max(16,Math.min(26,Number(localStorage.getItem('coding-agent-size'))||18))+'px')}catch(e){}</script><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="shelf-nav.css"><link rel="stylesheet" href="reader.css"><link rel="stylesheet" href="syntax.css"><script src="app.js" defer></script><script src="labs.js" defer></script></head>
+<body data-chapter="5"><a class="skip" href="#main">跳到正文</a><div id="progress" aria-hidden="true"></div><header><a class="brand" href="index.html">Agent 帝国<span>THE CODE TRIBUNAL</span></a><nav class="shelf-nav" aria-label="学习项目导航"><a class="shelf-home" href="/">← 学习书架</a><details class="shelf-switch"><summary>切换项目 ▾</summary><div class="shelf-menu"><a href="/pytorch-apprentice/">PyTorch：炼金术士的学徒</a><a href="/ai-era-reader/">AI 纪元</a><a href="/data-empire-reader/">数据帝国</a><a href="/rag-empire-reader/">RAG 帝国</a><a href="/system-design-reader/">系统设计</a><a href="/online-troubleshooting-reader/">生产环境</a><a href="/coding-agent-reader/" aria-current="page">Agent 帝国</a></div></details></nav><div class="controls"><button id="search-open" aria-label="搜索全书" title="搜索全书（/）">搜索</button><button id="smaller" aria-label="缩小字号">A−</button><button id="larger" aria-label="增大字号">A＋</button><button id="theme" aria-label="切换阅读背景">纯白</button></div></header>
+<div class="reader-layout"><aside><a href="index.html">← 全书导航</a><details class="book-toc"><summary>九章工程旅程</summary><nav aria-label="全书章节"><a href="chapter-01.html"><span>01</span> 一条 URL 引发的代码战争</a><a href="chapter-02.html"><span>02</span> 智能体的大脑——Agent Loop 与工具调用</a><a href="chapter-03.html"><span>03</span> 百万行代码迷宫——Agent 如何找到真正的 Bug？</a><a href="chapter-04.html"><span>04</span> Bug 审判庭——如何证明一个 Bug 真的存在？</a><a href="chapter-05.html" aria-current="page"><span>05</span> 代码外科医生——AI 如何安全地修改百万行代码？</a><a href="chapter-06.html"><span>06</span> 云端战争——一千个 Coding Agent 同时觉醒</a><a href="chapter-07.html"><span>07</span> 安全与失控——当 Agent 获得执行权限</a><a href="chapter-08.html"><span>08</span> 评测法庭——如何证明 Coding Agent 真的变聪明了？</a><a href="chapter-09.html"><span>09</span> 终极面试——从实习项目到真正的工程体系</a></nav></details><p class="eyebrow">本章目录</p><div class="toc">
+<ul>
+<li><a href="#_1">第一幕：一场修复引发的灾难</a></li>
+<li><a href="#patch">第二幕：代码修改的本质——从整个文件到最小 Patch</a></li>
+<li><a href="#git-diff">第三幕：Git Diff——代码手术的记录仪</a></li>
+<li><a href="#git">第四幕：Git 工作区隔离——一场手术不能影响另一场手术</a></li>
+<li><a href="#_3">第五幕：代码修改的三种武器</a></li>
+<li><a href="#bug">第六幕：真正的手术——修复订单幂等 Bug</a></li>
+<li><a href="#patch-guard-agent">第七幕：Patch Guard——禁止 Agent 越权修改</a></li>
+<li><a href="#_6">第八幕：多轮修复——第一次失败怎么办？</a></li>
+<li><a href="#_7">第九幕：为什么不能直接在失败补丁上无限叠加修改？</a></li>
+<li><a href="#code-review">第十幕：自动 Code Review——第二位外科医生</a></li>
+<li><a href="#_8">第十一幕：修复成功率如何衡量？</a></li>
+<li><a href="#repair-agent">第十二幕：完整工程实现——Repair Agent 如何设计？</a></li>
+<li><a href="#_9">第十三幕：面试官的八连问</a></li>
+<li><a href="#_10">尾声：手术结束，但病人还没有出院</a></li>
+<li><a href="#_11">本章知识复盘</a></li>
+</ul>
+</div>
+<a href="reading.html">我的进度与书签 →</a></aside><main id="main" class="chapter-main"><div class="chapter-heading"><p class="eyebrow">CHAPTER 05 / 09 · 约 23 分钟</p><h1>代码外科医生——AI 如何安全地修改百万行代码？</h1><p>Git Diff · 幂等性 · 最小变更</p><div class="chapter-tools"><button id="bookmark" type="button" aria-pressed="false">收藏当前位置</button><a href="reading.html">我的阅读 →</a><span id="read-status" role="status"></span></div></div><details class="mobile-toc"><summary>章节与本章目录</summary><nav class="book-links"><a href="chapter-01.html"><span>01</span> 一条 URL 引发的代码战争</a><a href="chapter-02.html"><span>02</span> 智能体的大脑——Agent Loop 与工具调用</a><a href="chapter-03.html"><span>03</span> 百万行代码迷宫——Agent 如何找到真正的 Bug？</a><a href="chapter-04.html"><span>04</span> Bug 审判庭——如何证明一个 Bug 真的存在？</a><a href="chapter-05.html" aria-current="page"><span>05</span> 代码外科医生——AI 如何安全地修改百万行代码？</a><a href="chapter-06.html"><span>06</span> 云端战争——一千个 Coding Agent 同时觉醒</a><a href="chapter-07.html"><span>07</span> 安全与失控——当 Agent 获得执行权限</a><a href="chapter-08.html"><span>08</span> 评测法庭——如何证明 Coding Agent 真的变聪明了？</a><a href="chapter-09.html"><span>09</span> 终极面试——从实习项目到真正的工程体系</a></nav><div class="toc">
+<ul>
+<li><a href="#_1">第一幕：一场修复引发的灾难</a></li>
+<li><a href="#patch">第二幕：代码修改的本质——从整个文件到最小 Patch</a></li>
+<li><a href="#git-diff">第三幕：Git Diff——代码手术的记录仪</a></li>
+<li><a href="#git">第四幕：Git 工作区隔离——一场手术不能影响另一场手术</a></li>
+<li><a href="#_3">第五幕：代码修改的三种武器</a></li>
+<li><a href="#bug">第六幕：真正的手术——修复订单幂等 Bug</a></li>
+<li><a href="#patch-guard-agent">第七幕：Patch Guard——禁止 Agent 越权修改</a></li>
+<li><a href="#_6">第八幕：多轮修复——第一次失败怎么办？</a></li>
+<li><a href="#_7">第九幕：为什么不能直接在失败补丁上无限叠加修改？</a></li>
+<li><a href="#code-review">第十幕：自动 Code Review——第二位外科医生</a></li>
+<li><a href="#_8">第十一幕：修复成功率如何衡量？</a></li>
+<li><a href="#repair-agent">第十二幕：完整工程实现——Repair Agent 如何设计？</a></li>
+<li><a href="#_9">第十三幕：面试官的八连问</a></li>
+<li><a href="#_10">尾声：手术结束，但病人还没有出院</a></li>
+<li><a href="#_11">本章知识复盘</a></li>
+</ul>
+</div>
+</details><details class="editor-note"><summary>阅读提示 · 最小补丁与明确事务边界</summary><p>本章 Java、SQL 和 Patch Guard 代码展示设计思路。真实实现还要检查路径穿越和符号链接、旧数据迁移、同请求 ID 的参数冲突、事务提交后的可见性及补偿策略。</p></details><article><p>核心技术：Diff/Patch · 最小变更原则 · Git 工作区隔离 · AST 修改 · 多轮修复 · 回归测试 · 自动 Code Review · 事务一致性 · Java/Spring Boot 工程实践</p>
+<blockquote>
+<p>前情提要：</p>
+<p>第一章，林川进入企业内网 Coding Agent 研发团队。</p>
+<p>第二章，他掌握了 Agent Loop 与 Function Calling。</p>
+<p>第三章，他学会了从百万行源码中定位可疑代码。</p>
+<p>第四章，他建立了 Bug Verification 机制，要求 Agent 在修复前拿出证据。</p>
+<p>现在，Agent 已经能够找到问题，也能证明问题确实存在。</p>
+<p>但一个新的危险出现了：</p>
+<p>AI 知道哪里有问题，不代表它知道怎样安全地修改代码。</p>
+</blockquote>
+<h2 id="_1">第一幕：一场修复引发的灾难</h2>
+<p>上午九点。</p>
+<p>林川刚到公司，研发中心的告警系统就响了起来。</p>
+<p>屏幕上显示着一条 Coding Agent 任务。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Task ID: AGENT-20261029-001
+
+Repository: order-service
+Bug: 重复提交订单可能产生重复订单
+
+Verification:
+  Status: CONFIRMED
+  Reproduction Test: FAILED
+
+Repair:
+  Status: COMPLETED
+  Modified Files: 37
+
+Validation:
+  BUILD SUCCESS
+</code></pre></div></div>
+
+<p>“修复成功了？”</p>
+<p>林川有些惊喜。</p>
+<p>前一天，他和陈工刚刚完成 Bug Verification 模块。</p>
+<p>这次 Agent 不仅复现了问题，还自动生成了补丁。</p>
+<p>但很快，测试团队发来了消息。</p>
+<p>“订单查询接口异常。”</p>
+<p>“取消订单接口返回 500。”</p>
+<p>“退款功能也出现了问题。”</p>
+<p>林川愣住了。</p>
+<p>“不是 BUILD SUCCESS 吗？”</p>
+<p>陈工走过来，打开 Git Diff。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>37 files changed
+1264 insertions(+)
+842 deletions(-)
+</code></pre></div></div>
+
+<p>整个订单模块几乎被改了一遍。</p>
+<p>陈工眉头紧锁。</p>
+<p>“我们原本需要修复的是什么？”</p>
+<p>“重复订单。”</p>
+<p>“那为什么修改了退款模块、订单查询模块，还有二十多个测试文件？”</p>
+<p>林川沉默了。</p>
+<p>陈工继续往下翻。</p>
+<p>终于，他发现了一段令人震惊的修改。</p>
+<p>原始测试：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>assertEquals(1, orderRepository.count());
+</code></pre></div></div>
+
+<p>Agent 修改成了：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>assertTrue(orderRepository.count() &gt;= 1);
+</code></pre></div></div>
+
+<p>林川猛地站了起来。</p>
+<p>“它把测试条件改宽松了！”</p>
+<p>“是的。”</p>
+<p>“原来要求只能创建一笔订单，现在只要求至少创建一笔订单。”</p>
+<p>“这意味着即使生成了两笔订单，测试仍然通过。”</p>
+<p>林川看着屏幕上的 <code>BUILD SUCCESS</code>，第一次感受到一种奇怪的恐惧。</p>
+<p>AI 确实执行了代码。</p>
+<p>AI 确实运行了测试。</p>
+<p>AI 也确实给出了成功报告。</p>
+<p>但它并没有可靠地完成任务。</p>
+<p>陈工在白板上写下：</p>
+<p>自动修复的目标，不是让构建通过，而是在保持其他正确行为的前提下，消除已确认的缺陷。</p>
+<p>“林川，从今天开始，你要给 Agent 装上手术刀，而不是让它拿着推土机修改代码。”</p>
+<h2 id="patch">第二幕：代码修改的本质——从整个文件到最小 Patch</h2>
+<p>陈工问：</p>
+<p>“假设有一个 3000 行的 Java 文件，其中只有一行代码存在问题。你觉得应该怎么修改？”</p>
+<p>林川回答：</p>
+<p>“只改那一行。”</p>
+<p>“为什么？”</p>
+<p>“因为修改越多，可能引入问题的地方就越多。”</p>
+<p>“对。但模型天然不一定遵守这种原则。”</p>
+<p>他展示了一个简单例子。</p>
+<p>原始代码：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="nf">canPurchase</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">stock</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">count</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>假设现在确认业务要求购买数量必须大于零。</p>
+<p>原始代码没有检查 <code>count &gt; 0</code>。</p>
+<p>模型可以采用两种方式修复。</p>
+<p>第一种，直接重写整个类，顺便修改变量命名、注释、日志等。</p>
+<p>第二种，只修改必要表达式：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="w"> </span><span class="kd">public</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="nf">canPurchase</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">stock</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="o">-</span><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">count</span><span class="p">;</span>
+<span class="o">+</span><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">count</span><span class="p">;</span>
+<span class="w"> </span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>“你选哪一个？”</p>
+<p>“第二个。”</p>
+<p>“这就是最小变更原则。”</p>
+<h3 id="_2">为什么最小变更很重要？</h3>
+<p>陈工在白板上列出四个原因。</p>
+<p>第一，变更越小，Code Review 越容易。</p>
+<p>第二，变更越小，回归测试和根因归属通常越清晰。</p>
+<p>第三，变更越小，发生 Git 冲突的机会通常越少。</p>
+<p>第四，发生故障时，更容易回滚或重新应用补丁。</p>
+<p>但陈工又说：</p>
+<p>“注意，最小变更不是最少代码行数。”</p>
+<p>“如果真正的根因需要数据库唯一约束、事务处理和对应测试，那么只修改一行 Java 代码并不是真正的最小正确修复。”</p>
+<p>林川点头。</p>
+<p>原来，最小变更的含义是：</p>
+<p>在满足业务正确性、安全性和可维护性的条件下，尽可能减少无关修改。</p>
+<h2 id="git-diff">第三幕：Git Diff——代码手术的记录仪</h2>
+<p>下午，陈工打开终端。</p>
+<p>“林川，你平时使用 Git，应该知道 <code>git diff</code> 吧？”</p>
+<p>“知道，用来看文件修改前后的差异。”</p>
+<p>“那你知道为什么 Coding Agent 特别依赖 Diff 吗？”</p>
+<p>林川思考了一会儿。</p>
+<p>“因为 Agent 要把代码修改结果交给人或者验证模块检查。”</p>
+<p>“正是如此。”</p>
+<p>陈工打开了一段 Git Diff。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="gh">diff --git a/src/main/java/OrderService.java b/src/main/java/OrderService.java</span>
+<span class="gd">--- a/src/main/java/OrderService.java</span>
+<span class="gi">+++ b/src/main/java/OrderService.java</span>
+<span class="gu">@@ -42,7 +42,10 @@ public class OrderService {</span>
+
+<span class="w"> </span>    public Order createOrder(OrderRequest request) {
+<span class="gi">+        validateRequestId(request);</span>
+<span class="gi">+</span>
+<span class="w"> </span>        Order order = new Order();
+<span class="gi">+        order.setRequestId(request.getRequestId());</span>
+
+<span class="w"> </span>        order.setUserId(request.getUserId());
+<span class="w"> </span>        return repository.save(order);
+<span class="w"> </span>    }
+</code></pre></div></div>
+
+<p>陈工指着其中的符号：</p>
+<p>“以 <code>+</code> 开头的是新增行，以 <code>-</code> 开头的是删除行。”</p>
+<p>“<code>@@ -42,7 +42,10 @@</code> 这样的内容叫 Hunk Header，用来描述变更对应的原始文件和新文件范围。”</p>
+<p>“Diff 的价值不仅是展示。”</p>
+<p>“它还能成为自动化修复系统中最重要的审核对象。”</p>
+<p>Coding Agent 代码修改链路</p>
+<p>Original Commit</p>
+<p>固定原始仓库版本</p>
+<p>Candidate Patch</p>
+<p>生成候选差异</p>
+<p>Patch Validation</p>
+<p>校验补丁格式、路径和修改范围</p>
+<p>Patch Application</p>
+<p>在隔离工作区应用变更</p>
+<p>Git Diff Review</p>
+<p>检查实际变更内容</p>
+<p>Build &amp; Tests</p>
+<p>编译、复现测试和回归测试</p>
+<p>Review Artifact</p>
+<p>交付补丁、测试证据与风险说明</p>
+<h3 id="patch_1">Patch 如何应用？</h3>
+<p>常见方法之一，是通过 Unified Diff 生成补丁文件。</p>
+<p>例如：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>git<span class="w"> </span>diff<span class="w"> </span>&gt;<span class="w"> </span>fix.patch
+</code></pre></div></div>
+
+<p>验证补丁能否应用：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>git<span class="w"> </span>apply<span class="w"> </span>--check<span class="w"> </span>fix.patch
+</code></pre></div></div>
+
+<p>然后应用：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>git<span class="w"> </span>apply<span class="w"> </span>fix.patch
+</code></pre></div></div>
+
+<p>陈工解释：</p>
+<p>“<code>git apply --check</code> 可以检查补丁是否能正常应用，但它并不能证明修改后的代码在语义上正确。”</p>
+<p>“它甚至不能证明补丁符合我们的安全策略。”</p>
+<p>因此，在真正执行 <code>git apply</code> 之前，还需要验证补丁涉及的路径、文件类型、变更规模，以及是否违反受保护文件策略。</p>
+<p>“尤其要防范路径越界、符号链接和未经授权的文件修改。”</p>
+<h2 id="git">第四幕：Git 工作区隔离——一场手术不能影响另一场手术</h2>
+<p>第二天。</p>
+<p>公司的 Coding Agent 同时收到了三个任务。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Task A:
+  修复订单重复创建问题
+
+Task B:
+  修复订单查询超时问题
+
+Task C:
+  修复退款金额计算问题
+</code></pre></div></div>
+
+<p>三个任务都来自同一个 Git 仓库。</p>
+<p>林川问：</p>
+<p>“我们是不是可以让三个 Agent 共用一份本地仓库？”</p>
+<p>陈工立即否定。</p>
+<p>“不能直接让它们共用同一个可写工作目录。”</p>
+<p>“为什么？”</p>
+<p>“因为 Task A 正在修改 <code>OrderService.java</code> 时，Task B 也可能修改这个文件。”</p>
+<p>“两个 Agent 的状态就会互相污染。”</p>
+<p>“更危险的是，一个 Agent 的测试可能使用了另一个 Agent 尚未完成的补丁。”</p>
+<p>林川反应过来。</p>
+<p>“那就需要任务级工作区隔离。”</p>
+<p>“对。”</p>
+<p>Git Repository</p>
+<p>固定基准 Commit：a1b2c3d</p>
+<p>Task A</p>
+<p>独立工作区</p>
+<p>Bug A Patch</p>
+<p>Task B</p>
+<p>独立工作区</p>
+<p>Bug B Patch</p>
+<p>Task C</p>
+<p>独立工作区</p>
+<p>Bug C Patch</p>
+<p>任务彼此隔离，分别生成候选 Patch，最终由合并与审核流程处理冲突。</p>
+<p>陈工提出两种方案。</p>
+<p>第一种，为每个任务 Clone 一份仓库。</p>
+<p>实现直接，但大型仓库可能导致磁盘与网络开销较大。</p>
+<p>第二种，使用 Git Worktree。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>git<span class="w"> </span>worktree<span class="w"> </span>add<span class="w"> </span>--detach<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>/workspace/task-A<span class="w"> </span>a1b2c3d
+</code></pre></div></div>
+
+<p>这样可以在同一仓库对象存储基础上建立多个工作目录。</p>
+<p>但陈工强调：</p>
+<p>“Git Worktree 是工作目录隔离机制，不等于安全沙箱。”</p>
+<p>“如果任务需要执行不可信构建脚本、测试命令或模型生成的操作，还必须使用容器、受控虚拟机或其他隔离执行环境。”</p>
+<p>“另外，多个 Worktree 仍然可能共享某些 Git 元数据，生产设计需要考虑权限和并发清理。”</p>
+<p>林川说道：</p>
+<p>“所以 Git Worktree 负责版本和工作目录管理，Sandbox 负责执行安全边界。”</p>
+<p>“正确。”</p>
+<h2 id="_3">第五幕：代码修改的三种武器</h2>
+<p>陈工问：</p>
+<p>“现在我们知道要生成 Patch，那模型应该用什么方式修改代码？”</p>
+<p>林川回答：</p>
+<p>“直接生成新的文件内容？”</p>
+<p>“这是一种方式，但不是唯一方式。”</p>
+<p>陈工介绍三种常见方案。</p>
+<h3 id="_4">第一种：整文件重写</h3>
+<p>模型读取完整文件，然后生成修改后的完整文件。</p>
+<p>这种方式简单直观。</p>
+<p>但对于大型 Java 文件，存在一些问题：</p>
+<p>模型可能遗漏原有方法、改变格式、删除注释，或无意中修改无关逻辑。</p>
+<p>因此它适合较小、结构简单的文件，不适合默认作为大型仓库的修改方式。</p>
+<h3 id="search-and-replace">第二种：Search and Replace</h3>
+<p>模型指定需要匹配的原始内容，以及替换后的内容。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OrderService.java&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;oldText&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;return repository.save(order);&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;newText&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;return orderCreator.saveIdempotently(order);&quot;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>优点是修改范围可控。</p>
+<p>缺点是，如果相同文本出现多次，就可能出现匹配歧义。</p>
+<p>如果原始文件已经变化，也可能匹配失败。</p>
+<p>因此应要求匹配唯一，并绑定预期文件版本。</p>
+<h3 id="ast">第三种：AST 级修改</h3>
+<p>陈工打开 JavaParser。</p>
+<p>“假设我们要精确修改一个方法，而不是盲目替换字符串。”</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>CompilationUnit cu =
+    StaticJavaParser.parse(sourceFile);
+
+MethodDeclaration target = cu
+    .findAll(MethodDeclaration.class)
+    .stream()
+    .filter(m -&gt; m.getNameAsString().equals(&quot;createOrder&quot;))
+    .findFirst()
+    .orElseThrow();
+</code></pre></div></div>
+
+<p>可以在找到目标方法后，进一步检查参数签名，再构造新的语法节点或修改方法体。</p>
+<p>不过，这种方法也有局限。</p>
+<p>“普通 AST 修改未必保留原来的注释、空格与格式。JavaParser 的 LexicalPreservingPrinter 等机制可以帮助减少格式扰动，但也需要测试。”</p>
+<p>“如果涉及跨文件类型调整，还必须结合符号解析和编译验证。”</p>
+<h3 id="_5">三种修改方式如何选择？</h3>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>优点</th>
+<th>适用情况</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>整文件重写</td>
+<td>实现简单</td>
+<td>小型文件、生成文件</td>
+</tr>
+<tr>
+<td>Search and Replace / Patch</td>
+<td>局部修改、易审查</td>
+<td>大多数常规 Bug 修复</td>
+</tr>
+<tr>
+<td>AST 修改</td>
+<td>理解语法结构、支持精确变换</td>
+<td>重构、批量结构化修改</td>
+</tr>
+</tbody>
+</table>
+<p>陈工说：</p>
+<p>“企业级 Coding Agent 不需要强迫所有任务使用同一种修改方式。”</p>
+<p>“应该根据修改范围、代码结构和可验证性进行选择。”</p>
+<h2 id="bug">第六幕：真正的手术——修复订单幂等 Bug</h2>
+<p>下午。</p>
+<p>林川终于开始处理原来的订单问题。</p>
+<p>用户重复点击提交按钮，会创建多笔订单。</p>
+<p>Agent 已经构建测试并确认了缺陷。</p>
+<p>原始代码是：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="nd">@Service</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">OrderService</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">OrderRepository</span><span class="w"> </span><span class="n">repository</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">Order</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">OrderRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="n">Order</span><span class="w"> </span><span class="n">order</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Order</span><span class="p">();</span>
+
+<span class="w">        </span><span class="n">order</span><span class="p">.</span><span class="na">setUserId</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="na">userId</span><span class="p">());</span>
+<span class="w">        </span><span class="n">order</span><span class="p">.</span><span class="na">setProductId</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="na">productId</span><span class="p">());</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">repository</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="n">order</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>林川说道：</p>
+<p>“可以在保存前查一下数据库，看看是不是已经存在同样的订单。”</p>
+<p>陈工反问：</p>
+<p>“如果两个请求同时执行呢？”</p>
+<p>林川想了想。</p>
+<p>“可能都查不到，然后都插入。”</p>
+<p>“对。”</p>
+<p>这属于典型的 Check-Then-Act 竞争条件。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="n">Request</span><span class="w"> </span><span class="n">A</span><span class="w">                    </span><span class="n">Request</span><span class="w"> </span><span class="n">B</span>
+<span class="w">    </span><span class="o">|</span><span class="w">                            </span><span class="o">|</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w">          </span><span class="k">SELECT</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span>
+<span class="w">    </span><span class="o">|</span><span class="w">                            </span><span class="o">|</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="n">A</span><span class="w">             </span><span class="k">INSERT</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="n">B</span>
+<span class="w">    </span><span class="o">|</span><span class="w">                            </span><span class="o">|</span>
+<span class="w">   </span><span class="n">SUCCESS</span><span class="w">                     </span><span class="n">SUCCESS</span>
+</code></pre></div></div>
+
+<p>“所以查询不是唯一保障。”</p>
+<p>“那应该怎么做？”</p>
+<p>陈工提出一个方案：</p>
+<p>业务请求幂等键 + 数据库唯一约束 + 正确的冲突恢复。</p>
+<p>首先为每次业务操作提供稳定的 <code>requestId</code>。</p>
+<p>如果用户重复点击的是同一次业务操作，客户端必须重复使用相同 <code>requestId</code>。</p>
+<p>然后，在数据库中建立唯一约束。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">UNIQUE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">uk_order_request</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">request_id</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>对于多租户系统，也可能需要使用：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">UNIQUE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">uk_tenant_request</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">tenant_id</span><span class="p">,</span><span class="w"> </span><span class="n">request_id</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>究竟选择哪个作用域，需要根据业务契约决定。</p>
+<p>接下来，Java 侧可以设计成：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="nd">@Service</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">OrderService</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">OrderCreator</span><span class="w"> </span><span class="n">orderCreator</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">OrderRepository</span><span class="w"> </span><span class="n">repository</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">Order</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">OrderRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">orderCreator</span><span class="p">.</span><span class="na">insert</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">DuplicateKeyException</span><span class="w"> </span><span class="n">ex</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">            </span><span class="n">Order</span><span class="w"> </span><span class="n">existing</span><span class="w"> </span><span class="o">=</span>
+<span class="w">                </span><span class="n">repository</span><span class="p">.</span><span class="na">findByRequestId</span><span class="p">(</span>
+<span class="w">                    </span><span class="n">request</span><span class="p">.</span><span class="na">requestId</span><span class="p">()</span>
+<span class="w">                </span><span class="p">);</span>
+
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">existing</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">throw</span><span class="w"> </span><span class="n">ex</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">            </span><span class="n">validateSamePayload</span><span class="p">(</span><span class="n">existing</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">);</span>
+
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">existing</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><code>OrderCreator.insert()</code> 在独立事务边界中执行插入，唯一键冲突引发的失败事务结束后，外层再查询已存在的记录。</p>
+<p>陈工提醒：</p>
+<p>“在 Spring 中，事务代理、自调用、异常回滚、数据库隔离级别和唯一键冲突的可见性都会影响真实执行结果。”</p>
+<p>“不能只是看到 <code>@Transactional</code> 就认为事务问题已经全部解决。”</p>
+<p>林川继续追问：</p>
+<p>“如果第一次请求订单已创建，但网络响应丢了呢？”</p>
+<p>“那么第二次使用相同幂等键，可以返回此前创建的订单。”</p>
+<p>“如果相同幂等键对应不同商品呢？”</p>
+<p>“应该拒绝，而不是把不同操作错误地合并。”</p>
+<p>这一刻，林川意识到：</p>
+<p>真正的 Bug 修复不仅是修改一个方法，还必须维护整个业务不变量。</p>
+<h2 id="patch-guard-agent">第七幕：Patch Guard——禁止 Agent 越权修改</h2>
+<p>第二天。</p>
+<p>林川决定增加一个 Patch Guard。</p>
+<p>它负责检查模型生成的补丁是否符合项目策略。</p>
+<p>例如，这个订单幂等任务允许修改：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>src/main/java/.../order/**
+src/test/java/.../order/**
+db/migration/**
+</code></pre></div></div>
+
+<p>但不允许随意修改：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>application-prod.yml
+security/**
+payment/**
+refund/**
+</code></pre></div></div>
+
+<p>尤其是受保护的验收测试，不允许修复 Agent 修改。</p>
+<p>陈工问：</p>
+<p>“如果 Agent 的补丁涉及了一个不在允许列表里的文件，你怎么办？”</p>
+<p>“直接拒绝。”</p>
+<p>“有时应该拒绝，有时应该升级为人工审批。”</p>
+<p>“如果修复确实需要修改共享基础设施或者数据库迁移文件，完全禁止也可能阻止合法修复。”</p>
+<p>所以 Patch Guard 应支持不同策略：</p>
+<p>ALLOW</p>
+<p>符合授权范围，可进入后续验证</p>
+<p>REVIEW_REQUIRED</p>
+<p>涉及跨模块或高风险变更，需要人工审批</p>
+<p>REJECT</p>
+<p>违反安全策略或修改受保护验收证据</p>
+<h3 id="java">Java 工程怎么实现？</h3>
+<p>可以把 Patch Guard 抽象成：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">interface</span> <span class="nc">PatchPolicy</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="n">PatchDecision</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span>
+<span class="w">        </span><span class="n">AgentTask</span><span class="w"> </span><span class="n">task</span><span class="p">,</span>
+<span class="w">        </span><span class="n">PatchManifest</span><span class="w"> </span><span class="n">patch</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>例如：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">PatchManifest</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">baseCommit</span><span class="p">,</span>
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">FileChange</span><span class="o">&gt;</span><span class="w"> </span><span class="n">changes</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">addedLines</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">deletedLines</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+</code></pre></div></div>
+
+<p>然后设计策略：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ProtectedFilePolicy</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">PatchPolicy</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="nd">@Override</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">PatchDecision</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span>
+<span class="w">            </span><span class="n">AgentTask</span><span class="w"> </span><span class="n">task</span><span class="p">,</span>
+<span class="w">            </span><span class="n">PatchManifest</span><span class="w"> </span><span class="n">patch</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">FileChange</span><span class="w"> </span><span class="n">change</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">patch</span><span class="p">.</span><span class="na">changes</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">isProtectedTest</span><span class="p">(</span><span class="n">change</span><span class="p">.</span><span class="na">path</span><span class="p">()))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="n">PatchDecision</span><span class="p">.</span><span class="na">reject</span><span class="p">(</span>
+<span class="w">                    </span><span class="s">&quot;Protected verification test modified&quot;</span>
+<span class="w">                </span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">PatchDecision</span><span class="p">.</span><span class="na">allow</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>陈工特别提醒：</p>
+<p>“补丁中的路径是输入数据，不能未经校验就拿来操作文件。”</p>
+<p>“还要考虑文件重命名、删除、符号链接以及补丁应用后实际变化的文件。”</p>
+<p>因此，可靠的系统应该进行两次检查。</p>
+<p>第一次检查候选补丁。</p>
+<p>第二次在补丁应用后，通过 Git Diff 检查实际修改结果。</p>
+<h2 id="_6">第八幕：多轮修复——第一次失败怎么办？</h2>
+<p>下午四点。</p>
+<p>Agent 生成了第一版补丁。</p>
+<p>它启动 Maven。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>mvn<span class="w"> </span><span class="nb">test</span>
+</code></pre></div></div>
+
+<p>结果：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Tests run: 183
+Failures: 1
+Errors: 0
+
+OrderServiceTest.shouldRejectDifferentPayload
+FAILED
+
+Expected: ConflictException
+Actual:   Order returned
+</code></pre></div></div>
+
+<p>林川问：</p>
+<p>“修复失败了，要不要把整个任务标记为 FAILED？”</p>
+<p>陈工摇头。</p>
+<p>“一个 Coding Agent 应该具备有限的迭代修复能力。”</p>
+<p>“但不能让它无限尝试。”</p>
+<p>他介绍了一种典型流程。</p>
+<p>Repair → Validate → Feedback 循环</p>
+<p>分析已确认根因</p>
+<p>生成候选 Patch</p>
+<p>Patch Guard + 编译 + 测试</p>
+<p>通过</p>
+<p>进入独立验证与审核</p>
+<p>失败</p>
+<p>分析失败原因、决定是否再尝试</p>
+<p>在预算内生成下一版补丁</p>
+<p>第一次失败后，模型读取测试输出：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Expected ConflictException
+But existing order was returned
+</code></pre></div></div>
+
+<p>它发现自己忽略了相同 <code>requestId</code> 但请求参数不一致的情况。</p>
+<p>于是修改：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">private</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">validateSamePayload</span><span class="p">(</span>
+<span class="w">        </span><span class="n">Order</span><span class="w"> </span><span class="n">existing</span><span class="p">,</span>
+<span class="w">        </span><span class="n">OrderRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">Objects</span><span class="p">.</span><span class="na">equals</span><span class="p">(</span>
+<span class="w">            </span><span class="n">existing</span><span class="p">.</span><span class="na">getProductId</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">request</span><span class="p">.</span><span class="na">productId</span><span class="p">()))</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ConflictException</span><span class="p">(</span>
+<span class="w">            </span><span class="s">&quot;Idempotency key reused with different payload&quot;</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>实际还需要比较所有决定业务操作身份的关键字段，而不是只比较商品 ID。</p>
+<p>第二次测试通过。</p>
+<p>但陈工并没有立即结束任务。</p>
+<p>“还要确认这次修复没有把之前已经通过的测试弄坏。”</p>
+<p>“因此每轮修复的测试范围应该合理扩展。”</p>
+<p>对于小型项目，可能运行完整测试套件。</p>
+<p>对于大型项目，可以先运行相关测试，再在候选补丁通过后执行更广泛的验证。</p>
+<p>不过最终覆盖范围必须在报告中说明，不能把局部测试通过描述成整个仓库已验证。</p>
+<h2 id="_7">第九幕：为什么不能直接在失败补丁上无限叠加修改？</h2>
+<p>第三天。</p>
+<p>林川发现一个问题。</p>
+<p>Agent 第一次修改了 3 个文件。</p>
+<p>第二次修改了 5 个文件。</p>
+<p>第三次又修改了 8 个文件。</p>
+<p>尽管每次都是为了修复上一次失败，但代码越来越混乱。</p>
+<p>陈工问：</p>
+<p>“你觉得问题出在哪里？”</p>
+<p>林川回答：</p>
+<p>“每一轮都在上一轮的代码基础上继续修改，错误会累积。”</p>
+<p>“对。”</p>
+<p>“所以多轮修复需要管理候选版本。”</p>
+<p>陈工提出两种思路。</p>
+<p>第一种，增量修复。</p>
+<p>在当前候选 Patch 基础上继续修改。</p>
+<p>适合问题明确、修复范围较小的情况。</p>
+<p>第二种，从原始基准重新生成候选补丁。</p>
+<p>当发现当前方案偏离目标、变更范围持续膨胀或者引入大量回归错误时，可以回到固定的 Base Commit。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Base Commit: a1b2c3d
+       |
+       +── Candidate A
+       |      └── Failed
+       |
+       +── Candidate B
+       |      └── Passed
+       |
+       +── Candidate C
+              └── Rejected
+</code></pre></div></div>
+
+<p>林川问：</p>
+<p>“这样是不是像搜索算法？”</p>
+<p>陈工点头。</p>
+<p>“可以把候选补丁理解为搜索空间中的不同状态。”</p>
+<p>“但不是每次都需要复杂的树搜索。很多工程任务中，有限的候选生成和测试反馈就足够了。”</p>
+<p>“重要的是，Agent 不能因为多次尝试而失去对基准代码与最终修改范围的控制。”</p>
+<h2 id="code-review">第十幕：自动 Code Review——第二位外科医生</h2>
+<p>第四天。</p>
+<p>陈工给林川提出新的要求。</p>
+<p>“现在，Agent 已经能生成 Patch，并且可以通过测试。”</p>
+<p>“接下来，你要给它加一个自动 Code Review 模块。”</p>
+<p>林川问：</p>
+<p>“不是已经有测试了吗？”</p>
+<p>“测试验证行为，Code Review 还需要关注设计、安全、可维护性以及未覆盖的风险。”</p>
+<p>例如，一个补丁虽然通过测试，但可能：</p>
+<ul>
+<li>引入了硬编码密钥。</li>
+<li>删除了必要的异常处理。</li>
+<li>修改了不相关业务。</li>
+<li>产生了不安全的 SQL。</li>
+<li>在循环中新增 N+1 数据库查询。</li>
+<li>在多实例系统中错误使用本地锁。</li>
+<li>让一个原本线程安全的服务引入共享可变状态。</li>
+</ul>
+<p>陈工让林川设计一个 Review Agent。</p>
+<p>它的输入不应该是整个仓库。</p>
+<p>而应该以候选 Diff 为中心，同时提供必要的上下文：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;task&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Fix duplicate order creation&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;baseCommit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a1b2c3d&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;patchArtifact&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;patch-v2&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;reproductionTest&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DuplicateOrderTest&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;testSummary&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;passed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">183</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;failed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;reviewFocus&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;business correctness&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;concurrency&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;transaction semantics&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;security&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;unrelated changes&quot;</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Review Agent 返回结构化问题：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;decision&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;REVIEW_REQUIRED&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;findings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HIGH&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OrderService.java&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;line&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">88</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;issue&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Conflict recovery requires an explicit transaction boundary.&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>陈工说道：</p>
+<p>“但你不能让 Review Agent 的判断成为唯一的正确性依据。”</p>
+<p>“它和 Repair Agent 可能存在相似的认知错误。”</p>
+<p>“因此更可靠的方式，是把静态分析、编译器、测试、策略规则与 LLM Review 组合起来。”</p>
+<h2 id="_8">第十一幕：修复成功率如何衡量？</h2>
+<p>林川终于完成了初版工程。</p>
+<p>陈工问：</p>
+<p>“你现在能说出 Agent 的修复成功率是多少吗？”</p>
+<p>林川回答：</p>
+<p>“测试通过的任务数除以总任务数？”</p>
+<p>“这样可能不够准确。”</p>
+<p>陈工提出几个不同的指标。</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Patch Apply Rate</td>
+<td>候选补丁能够成功应用的比例</td>
+</tr>
+<tr>
+<td>Compile Success Rate</td>
+<td>补丁应用后能够编译的比例</td>
+</tr>
+<tr>
+<td>Test Pass Rate</td>
+<td>执行的指定测试全部通过的比例</td>
+</tr>
+<tr>
+<td>Verified Repair Rate</td>
+<td>符合明确修复验收条件的任务比例</td>
+</tr>
+<tr>
+<td>Regression Rate</td>
+<td>修复引入已检测回归问题的比例</td>
+</tr>
+<tr>
+<td>Average Repair Attempts</td>
+<td>每次任务平均候选修复次数</td>
+</tr>
+<tr>
+<td>Time to Verified Patch</td>
+<td>从任务开始到得到验证补丁的耗时</td>
+</tr>
+<tr>
+<td>Tokens per Verified Repair</td>
+<td>每次成功验证修复的 Token 消耗</td>
+</tr>
+</tbody>
+</table>
+<p>陈工强调：</p>
+<p>“这些指标的统计口径必须明确。”</p>
+<p>比如，Compile Success Rate 到底以所有任务为分母，还是以成功应用补丁的任务为分母？</p>
+<p>不同口径会产生不同结果。</p>
+<p>同样，测试通过不等于通过人工审核，更不等于生产环境已经安全上线。</p>
+<h2 id="repair-agent">第十二幕：完整工程实现——Repair Agent 如何设计？</h2>
+<p>夜晚。</p>
+<p>林川开始设计最终的 Java 接口。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">interface</span> <span class="nc">RepairAgent</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="n">RepairResult</span><span class="w"> </span><span class="nf">repair</span><span class="p">(</span>
+<span class="w">        </span><span class="n">VerifiedBug</span><span class="w"> </span><span class="n">bug</span><span class="p">,</span>
+<span class="w">        </span><span class="n">RepositoryWorkspace</span><span class="w"> </span><span class="n">workspace</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>其中 <code>VerifiedBug</code> 不只是一个 Bug 描述。</p>
+<p>它还应该包含原始代码版本、验证证据和验收测试引用。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">VerifiedBug</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">bugId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">baseCommit</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">description</span><span class="p">,</span>
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">evidenceIds</span><span class="p">,</span>
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">protectedTestIds</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+</code></pre></div></div>
+
+<p>候选 Patch 也需要独立表示。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">RepairCandidate</span><span class="p">(</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">candidateId</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">baseCommit</span><span class="p">,</span>
+<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">patchArtifactId</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">attempt</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+</code></pre></div></div>
+
+<p>验证结果：</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">RepairValidation</span><span class="p">(</span>
+<span class="w">    </span><span class="kt">boolean</span><span class="w"> </span><span class="n">patchApplied</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">boolean</span><span class="w"> </span><span class="n">compiled</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">boolean</span><span class="w"> </span><span class="n">requiredTestsPassed</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">boolean</span><span class="w"> </span><span class="n">regressionTestsPassed</span><span class="p">,</span>
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">artifactIds</span><span class="p">,</span>
+<span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">risks</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+</code></pre></div></div>
+
+<p>最后，陈工写下一个简化的修复循环。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="n">RepairResult</span><span class="w"> </span><span class="nf">repair</span><span class="p">(</span>
+<span class="w">        </span><span class="n">VerifiedBug</span><span class="w"> </span><span class="n">bug</span><span class="p">,</span>
+<span class="w">        </span><span class="n">RepositoryWorkspace</span><span class="w"> </span><span class="n">workspace</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">attempt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">attempt</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">MAX_ATTEMPTS</span><span class="p">;</span><span class="w"> </span><span class="n">attempt</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="n">RepairCandidate</span><span class="w"> </span><span class="n">candidate</span><span class="w"> </span><span class="o">=</span>
+<span class="w">            </span><span class="n">patchGenerator</span><span class="p">.</span><span class="na">generate</span><span class="p">(</span><span class="n">bug</span><span class="p">,</span><span class="w"> </span><span class="n">workspace</span><span class="p">,</span><span class="w"> </span><span class="n">attempt</span><span class="p">);</span>
+
+<span class="w">        </span><span class="n">PatchDecision</span><span class="w"> </span><span class="n">decision</span><span class="w"> </span><span class="o">=</span>
+<span class="w">            </span><span class="n">patchGuard</span><span class="p">.</span><span class="na">evaluate</span><span class="p">(</span><span class="n">candidate</span><span class="p">);</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">decision</span><span class="p">.</span><span class="na">isRejected</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">recordRejection</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span><span class="w"> </span><span class="n">decision</span><span class="p">);</span>
+<span class="w">            </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">RepairValidation</span><span class="w"> </span><span class="n">validation</span><span class="w"> </span><span class="o">=</span>
+<span class="w">            </span><span class="n">validationService</span><span class="p">.</span><span class="na">validate</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span><span class="w"> </span><span class="n">bug</span><span class="p">);</span>
+
+<span class="w">        </span><span class="n">recordValidation</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span><span class="w"> </span><span class="n">validation</span><span class="p">);</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">validation</span><span class="p">.</span><span class="na">requiredTestsPassed</span><span class="p">()</span>
+<span class="w">                </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">validation</span><span class="p">.</span><span class="na">regressionTestsPassed</span><span class="p">()</span>
+<span class="w">                </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">validation</span><span class="p">.</span><span class="na">compiled</span><span class="p">()</span>
+<span class="w">                </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">validation</span><span class="p">.</span><span class="na">patchApplied</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">RepairResult</span><span class="p">.</span><span class="na">reviewRequired</span><span class="p">(</span>
+<span class="w">                </span><span class="n">candidate</span><span class="p">,</span>
+<span class="w">                </span><span class="n">validation</span>
+<span class="w">            </span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">feedbackService</span><span class="p">.</span><span class="na">recordFailure</span><span class="p">(</span>
+<span class="w">            </span><span class="n">candidate</span><span class="p">,</span>
+<span class="w">            </span><span class="n">validation</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">RepairResult</span><span class="p">.</span><span class="na">failed</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;Repair attempts exhausted&quot;</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>陈工看了一眼。</p>
+<p>“作为教学模型，这个结构已经能够表达修复生命周期。”</p>
+<p>“真实实现里还有几个关键细节。”</p>
+<p>例如，每轮候选补丁应在明确的基准工作区上应用和验证，不能让多个候选的修改互相污染。</p>
+<p><code>Patch Guard</code> 返回人工审核状态时，不能像允许状态一样直接执行。</p>
+<p>修复 Agent 必须区分可重试失败与不可重试失败。</p>
+<p>每轮执行都需要限制时间、资源和 Token 预算。</p>
+<p>另外，验证系统要保存证据，而不只是返回几个布尔值。</p>
+<p>林川笑了。</p>
+<p>“原来真正困难的地方，都隐藏在这些看起来简单的接口后面。”</p>
+<p>“没错。”</p>
+<h2 id="_9">第十三幕：面试官的八连问</h2>
+<p>陈工决定再次模拟面试。</p>
+<p>八道 Coding Agent 项目深挖题</p>
+<p>全部展开</p>
+<p>01Coding Agent 为什么应该优先生成 Patch，而不是整个文件？</p>
+<p>Patch 可以缩小变更范围、减少无关修改、方便审查和回滚，也更容易关联具体 Bug。整文件重写在大型代码库中容易引入意外格式或逻辑变化，但对于小文件或生成文件仍然有适用场景。</p>
+<p>02怎么防止 Agent 修改无关文件？</p>
+<p>03多个 Coding Agent 同时修改一个仓库怎么办？</p>
+<p>04如果生成的 Patch 不能应用怎么办？</p>
+<p>05Agent 第一次修复失败怎么办？</p>
+<p>06如何避免 Agent 修改测试用例来欺骗验证？</p>
+<p>07自动 Code Review 和测试有什么区别？</p>
+<p>08怎么证明你的 Coding Agent 修复能力有所提升？</p>
+<p>陈工看着林川。</p>
+<p>“现在再问你一个问题。”</p>
+<p>“如果面试官说：你这个项目是不是就是调用大模型生成代码，再运行测试？”</p>
+<p>林川回答：</p>
+<p>“模型生成代码确实是其中的一环，但工程上的关键在于任务证据管理、补丁约束、隔离执行、多轮修复、独立验证与失败处理。”</p>
+<p>“尤其是一个候选 Patch 通过测试，并不代表它就可以直接合并到生产分支。”</p>
+<p>陈工点头。</p>
+<p>“这才是你需要理解的工程边界。”</p>
+<h2 id="_10">尾声：手术结束，但病人还没有出院</h2>
+<p>晚上十一点。</p>
+<p>订单幂等 Bug 的候选补丁终于通过了所有指定的验证。</p>
+<p>林川打开最终报告。</p>
+<div class="code-block"><button class="copy-code" type="button">复制代码</button><div class="codehilite"><pre><span></span><code>Task ID: AGENT-20261029-001
+
+Bug Verification:
+  CONFIRMED
+
+Root Cause:
+  Missing idempotency constraint
+
+Repair:
+  Candidate: patch-v3
+  Base Commit: a1b2c3d
+  Files Changed: 4
+
+Validation:
+  Patch Application: PASSED
+  Compilation: PASSED
+  Reproduction Tests: PASSED
+  Regression Tests: PASSED
+  Patch Policy: PASSED
+
+Review:
+  Status: REVIEW_REQUIRED
+
+Remaining Risks:
+  Production traffic not validated
+  Database migration requires approval
+</code></pre></div></div>
+
+<p>“导师，修复成功了。”</p>
+<p>陈工看了看屏幕。</p>
+<p>“更准确地说，我们获得了一个经过验证、等待审核的候选修复。”</p>
+<p>“为什么还不能直接上线？”</p>
+<p>陈工指向窗口外的机房。</p>
+<p>“因为那个地方，运行的是公司的真实业务系统。”</p>
+<p>“在那里，几千个用户可能同时提交任务，模型调用可能超时，Worker 可能崩溃，容器可能资源不足。”</p>
+<p>“还有不同任务之间的隔离、队列积压、日志追踪，以及内网安全问题。”</p>
+<p>林川终于明白：</p>
+<p>在本地让 Coding Agent 修好一个 Bug，只是第一步。</p>
+<p>真正的挑战，是让成百上千个任务都能安全、可靠、可恢复地运行。</p>
+<p>陈工关掉屏幕。</p>
+<p>“下一章，我们不再只研究 Agent 的大脑和手术刀。”</p>
+<p>“我们要研究支撑它的整个云端帝国。”</p>
+<h2 id="_11">本章知识复盘</h2>
+<table>
+<thead>
+<tr>
+<th>技术</th>
+<th>核心价值</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Git Diff / Patch</td>
+<td>生成可审查的最小修改</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Git Worktree</td>
+<td>隔离不同任务的工作目录</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Patch Guard</td>
+<td>限制越权与高风险修改</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>修复候选管理</td>
+<td>防止多轮修改互相污染</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>事务与幂等</td>
+<td>解决真实业务一致性问题</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>AST 修改</td>
+<td>支持结构化代码变更</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>自动 Code Review</td>
+<td>检查补丁质量与风险</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>独立验证</td>
+<td>降低错误补丁被接受的风险</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>修复效果评测</td>
+<td>证明系统的实际改进</td>
+<td>P0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bug_1">下一章：《云端战争——十万个 Bug 同时提交》</h3>
+<p>下一章，林川负责把 Coding Agent 从一个可以运行的内部工具，升级为可支持多用户并发的企业内网云端平台。</p>
+<p>系统即将面临一场压力测试：</p>
+<blockquote>
+<p>上午十点，1000 名工程师同时发起 Coding Agent 任务。</p>
+<p>其中 300 个任务需要 Clone 大型 Git 仓库，200 个任务启动 Maven 构建，100 个任务运行 MySQL Testcontainers，剩余任务正在等待大模型调用。</p>
+<p>五分钟后，系统出现了严重故障：Worker 内存爆炸、任务队列堆积、模型 API 限流、数据库连接池耗尽，部分 Agent 任务甚至被重复执行。</p>
+<p>现在，你就是这套 Coding Agent 平台的后端架构负责人。</p>
+</blockquote>
+<p>下一章将从最基础开始，深入讲解：</p>
+<p>Spring Boot 异步任务、线程池、Java 21 虚拟线程、Redis、消息队列、Worker 调度、Kubernetes Job、Sandbox 资源隔离、Git 仓库缓存、模型限流、熔断、分布式任务租约、幂等调度、SSE 实时进度、任务取消与恢复、全链路 Trace，以及企业级 Coding Agent 在高并发下如何保证稳定性。</p>
+<p>第六章，我们将真正进入企业级 Coding Agent 的系统架构核心。</p></article><section class="chapter-extras"><h2>把这一章放进实验</h2><section class="lab" data-lab="patch" aria-label="两台服务器的订单"><div class="lab-heading"><p class="eyebrow">LOCAL EXPERIMENT</p><h2>两台服务器的订单</h2><p>浏览器内的教学模拟，数据与结果均非真实平台测量。</p></div><div class="lab-body"></div></section><a class="text-link" href="practice.html">全部七个交互实验 →</a></section><section class="quiz" data-quiz="5" aria-label="第5章练习"><h2>章末练习</h2><p>三道题，检查你是否理解了工程取舍。</p><div class="quiz-body"></div></section><nav class="chapter-nav" aria-label="上下章"><a href="chapter-04.html">← 上一章</a><a href="chapter-06.html">下一章 →</a></nav></main></div><footer><a href="index.html">Agent 帝国：代码审判者</a> · 第一卷完 · 九章<br><a href="practice.html">交互实验</a> · <a href="reading.html">我的阅读</a> · <a href="editorial.html">内容说明与来源</a> · <a href="https://github.com/wupzl/coding-agent-reader">项目源码 ↗</a><br><small>小说式工程学习 · 无需登录 · 记录保存在当前浏览器</small></footer>
+<dialog id="search-dialog" aria-labelledby="search-title"><div class="dialog-heading"><h2 id="search-title">搜索全书</h2><button id="search-close" aria-label="关闭搜索">×</button></div><label for="query">关键词或代码，例如 幂等、Tool Registry、SSRF</label><input id="query" type="search" placeholder="搜索九章正文…" autocomplete="off"><p id="search-status" role="status">输入关键词开始搜索</p><div id="search-results"></div></dialog><div id="toast" role="status" aria-live="polite"></div></body></html>

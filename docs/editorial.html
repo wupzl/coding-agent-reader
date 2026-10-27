@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="description" content="Agent 帝国：代码审判者。九章小说式 Coding Agent 工程阅读，含本地交互实验与章末练习。"><title>内容说明与来源 · Agent 帝国</title><script>try{document.documentElement.dataset.theme=localStorage.getItem('coding-agent-theme')||'white';document.documentElement.style.setProperty('--reading-size',Math.max(16,Math.min(26,Number(localStorage.getItem('coding-agent-size'))||18))+'px')}catch(e){}</script><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="shelf-nav.css"><link rel="stylesheet" href="reader.css"><link rel="stylesheet" href="syntax.css"><script src="app.js" defer></script><script src="labs.js" defer></script></head>
+<body data-chapter="0"><a class="skip" href="#main">跳到正文</a><div id="progress" aria-hidden="true"></div><header><a class="brand" href="index.html">Agent 帝国<span>THE CODE TRIBUNAL</span></a><nav class="shelf-nav" aria-label="学习项目导航"><a class="shelf-home" href="/">← 学习书架</a><details class="shelf-switch"><summary>切换项目 ▾</summary><div class="shelf-menu"><a href="/pytorch-apprentice/">PyTorch：炼金术士的学徒</a><a href="/ai-era-reader/">AI 纪元</a><a href="/data-empire-reader/">数据帝国</a><a href="/rag-empire-reader/">RAG 帝国</a><a href="/system-design-reader/">系统设计</a><a href="/online-troubleshooting-reader/">生产环境</a><a href="/coding-agent-reader/" aria-current="page">Agent 帝国</a></div></details></nav><div class="controls"><button id="search-open" aria-label="搜索全书" title="搜索全书（/）">搜索</button><button id="smaller" aria-label="缩小字号">A−</button><button id="larger" aria-label="增大字号">A＋</button><button id="theme" aria-label="切换阅读背景">纯白</button></div></header>
+<main id="main" class="standalone"><article><h1 id="_1">内容整理与技术说明</h1>
+<p>本书以用户提供的《Agent 帝国：代码审判者》为基础，保留林川、陈工与九章故事主线。第一卷完结，第二卷只保留预告。原始文档保存在 <code>source/codingagent.original.md</code>，维护后的正文位于 <code>chapters/</code>。</p>
+<h2 id="_2">本次整理</h2>
+<ul>
+<li>删除开头的聊天提问、重复书名和串场残留，移除第一章重复的后续章节路线，章节导航统一由网站提供。</li>
+<li>补齐原文缺失的第七章标题，统一章、幕和小节的标题层级。</li>
+<li>清除来源链接的追踪参数，修复公式转义、Pass@K 写法，给代码示例标注语言。</li>
+<li>清理无法还原为可靠图表的连写数字，保留相邻的模拟数据说明；交互实验使用明确的教学模型。</li>
+<li>为每章补充阅读提示，标明示例代码、虚构指标、测试边界和重要工程前提。未将示意片段包装成可直接运行的完整后端项目。</li>
+<li>故事采用短段落与对话体；保留这种阅读节奏，并由网页控制字号、行距和代码滚动。</li>
+</ul>
+<h2 id="_3">核查依据</h2>
+<h3 id="_4">事务与重复请求</h3>
+<p>数据库唯一约束应对应业务幂等域。捕获重复键后，要考虑失败事务的状态、提交可见性和相同请求标识的参数冲突；简单地在同一个失败事务中继续查询并不可靠。参阅 <a href="https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-propagation.html">Spring 事务传播文档</a>。</p>
+<h3 id="java-21">Java 21 虚拟线程</h3>
+<p>虚拟线程帮助承载大量等待 I/O 的并发任务；它们不会扩大数据库、CPU 或模型接口的容量，也不能代替并发限额。正文保留 Java 21 的讨论范围，不把后续 JDK 的行为直接套到 Java 21。参阅 <a href="https://docs.oracle.com/en/java/javase/21/core/virtual-threads.html">Oracle Java 21 虚拟线程文档</a>。</p>
+<h3 id="_5">沙箱与工具权限</h3>
+<p>模型提出行动，运行时校验并执行。仓库内容不是指令来源；测试命令本身也可能运行仓库代码。容器安全策略只是多层防护的一环。参阅 <a href="https://kubernetes.io/docs/concepts/security/pod-security-standards/">Kubernetes Pod Security Standards</a>。</p>
+<h3 id="_6">修复评测</h3>
+<p>SWE-bench 根据真实代码库的问题描述评估补丁，使用独立执行环境检查结果。站内的通过率计算器展示固定预算下的教学模型，不代表任何真实模型或平台成绩。参阅 <a href="https://www.swebench.com/SWE-bench/">SWE-bench 官方说明</a>。</p>
+<h2 id="_7">使用边界</h2>
+<p>小说中的时间、监控数字、公司、任务结果和个人经历均为叙事或教学示例。示例没有经过完整生产验收。章末练习用于自测理解，不构成能力认证。</p>
+<p>本站无需登录，不调用模型 API。阅读进度、书签和练习结果仅保存在当前浏览器，可在“我的阅读”中清除；不会在设备之间同步。清除浏览器数据也会清除这些记录。</p></article></main><footer><a href="index.html">Agent 帝国：代码审判者</a> · 第一卷完 · 九章<br><a href="practice.html">交互实验</a> · <a href="reading.html">我的阅读</a> · <a href="editorial.html">内容说明与来源</a> · <a href="https://github.com/wupzl/coding-agent-reader">项目源码 ↗</a><br><small>小说式工程学习 · 无需登录 · 记录保存在当前浏览器</small></footer>
+<dialog id="search-dialog" aria-labelledby="search-title"><div class="dialog-heading"><h2 id="search-title">搜索全书</h2><button id="search-close" aria-label="关闭搜索">×</button></div><label for="query">关键词或代码，例如 幂等、Tool Registry、SSRF</label><input id="query" type="search" placeholder="搜索九章正文…" autocomplete="off"><p id="search-status" role="status">输入关键词开始搜索</p><div id="search-results"></div></dialog><div id="toast" role="status" aria-live="polite"></div></body></html>
