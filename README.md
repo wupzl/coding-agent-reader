@@ -46,3 +46,6 @@ GitHub Pages 从 `main` 分支的 `/docs` 发布，仓库为公开项目，无�
 跨项目维护脚本 `scripts/integrate_bookshelf.py` 会更新同级六个阅读仓库的已生成页面、源生成器和学习书架验收配置。运行前应确认这些仓库的工作区状态。该脚本本身不提交或推送。
 
 第三方 KaTeX 许可证见 `vendor/KaTeX-LICENSE.txt`。
+
+
+项目切换菜单已接入 [面试官的审判](https://wupzl.github.io/interview-proof-reader/)，七章技术面试小说与七组本地训练，第八章待续。

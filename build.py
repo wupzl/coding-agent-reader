@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parent
 OUT=ROOT/'docs'
 BOOK=json.loads((ROOT/'book.json').read_text(encoding='utf-8'))
 CHAPTERS=BOOK['chapters']
-PROJECTS=[('pytorch-apprentice','PyTorch：炼金术士的学徒'),('ai-era-reader','AI 纪元'),('data-empire-reader','数据帝国'),('rag-empire-reader','RAG 帝国'),('system-design-reader','系统设计'),('online-troubleshooting-reader','生产环境'),('coding-agent-reader','Agent 帝国')]
+PROJECTS=[('pytorch-apprentice','PyTorch：炼金术士的学徒'),('ai-era-reader','AI 纪元'),('data-empire-reader','数据帝国'),('rag-empire-reader','RAG 帝国'),('system-design-reader','系统设计'),('online-troubleshooting-reader','生产环境'),('coding-agent-reader','Agent 帝国'), ('interview-proof-reader', '面试官的审判')]
 LABS=[('loop','Agent 的下一步','逐步执行任务，观察证据、预算与停止条件。'),('retrieval','从描述找到代码','比较关键词和加入同义词的检索，观察候选文件。'),('verify','Bug 审判庭','依据需求、代码和运行证据，选择可支持的结论。'),('patch','两台服务器的订单','切换 JVM 锁与数据库约束，观察跨实例并发。'),('queue','云端任务调度','调整到达速率、Worker 与模型配额，观察积压。'),('guard','工具权限闸门','模拟路径、网络与凭证访问的运行时决策。'),('eval','一次成功与多次尝试','改变单次成功概率和尝试预算，理解计算假设。')]
 CHAPTER_LAB=['loop','loop','retrieval','verify','patch','queue','guard','eval','loop']
 
