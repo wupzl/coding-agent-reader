@@ -56,7 +56,7 @@ def main():
                 page.goto(BASE+path.name)
                 if path.name.startswith('chapter-'):expect(page.locator('.quiz fieldset')).to_have_count(3)
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),('overflow',width,path.name)
-                expect(page.locator('.shelf-menu a')).to_have_count(8)
+                expect(page.locator('.shelf-menu a')).to_have_count(9)
                 page.locator('.shelf-switch summary').click();box=page.locator('.shelf-menu').bounding_box()
                 assert box and box['x']>=0 and box['x']+box['width']<=width,(width,path.name,box)
                 page.locator('.shelf-switch summary').click()
